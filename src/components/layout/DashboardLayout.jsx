@@ -1,0 +1,158 @@
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Wallet,
+  ArrowLeftRight,
+  Receipt,
+  FileText,
+  BarChart3,
+  Settings,
+  Menu,
+  User,
+  X,
+} from 'lucide-react';
+import { useState } from 'react';
+
+const navItems = [
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Resumen general' },
+  { path: '/cuentas', icon: Wallet, label: 'Cuentas', description: 'Gestion de cuentas' },
+  { path: '/movimientos', icon: ArrowLeftRight, label: 'Movimientos', description: 'Ingresos y egresos' },
+  { path: '/facturas', icon: Receipt, label: 'Facturas', description: 'Facturacion' },
+  { path: '/iva', icon: FileText, label: 'IVA', description: 'Control de IVA' },
+  { path: '/reportes', icon: BarChart3, label: 'Reportes', description: 'Informes' },
+];
+
+export default function DashboardLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const currentPage = navItems.find((item) => item.path === location.pathname);
+
+  return (
+    <div className="min-h-screen w-full bg-slate-50">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`
+          fixed top-0 left-0 z-50 h-full w-[min(18rem,86vw)] bg-gradient-to-b from-slate-900 to-slate-800 text-white transform transition-transform duration-300 ease-in-out
+          lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-700/50">
+          <span className="font-semibold">Menu</span>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg hover:bg-slate-700"
+            aria-label="Cerrar menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-700/50">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shrink-0">
+            <span className="text-lg font-bold">CD</span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold truncate">Concepto Digital</h1>
+            <p className="text-xs text-slate-400">Sistema Administrativo</p>
+          </div>
+        </div>
+
+        <nav className="p-4 space-y-1 overflow-y-auto">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => `
+                group flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
+                ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-600/20 to-transparent text-white border-l-2 border-blue-500'
+                    : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+                }
+              `}
+            >
+              <div
+                className={`p-2 rounded-lg shrink-0 ${
+                  location.pathname === item.path
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-slate-700/50 text-slate-400 group-hover:text-white'
+                }`}
+              >
+                <item.icon size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium truncate">{item.label}</p>
+                <p className="text-xs text-slate-400 truncate">{item.description}</p>
+              </div>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shrink-0">
+              <User size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">Administrador</p>
+              <p className="text-xs text-slate-400 truncate">admin@concepto.digital</p>
+            </div>
+            <button
+              className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors shrink-0"
+              aria-label="Configuracion"
+            >
+              <Settings size={18} />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="lg:pl-72 min-h-screen flex flex-col min-w-0">
+        <header className="h-16 sm:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between gap-3 px-3 sm:px-6 sticky top-0 z-30 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <button
+              className="lg:hidden p-2 sm:p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shrink-0"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-xl font-bold text-slate-800 truncate">
+                {currentPage?.label || 'Dashboard'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 hidden sm:block truncate">
+                {currentPage?.description || 'Resumen general'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs sm:text-sm font-medium text-slate-600">Sistema activo</span>
+            </div>
+            <button
+              className="p-2 sm:p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              aria-label="Configuracion"
+            >
+              <Settings size={18} />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 w-full min-w-0">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
