@@ -105,6 +105,7 @@ export const getTipoCuentaLabel = (tipo) => {
 
 export const getTipoMovimientoLabel = (tipo) => {
   const labels = {
+    factura_venta: "Factura de venta",
     pago_iva: "PAGO DE IVA",
     pago_ica: "PAGO DE ICA",
     pago_factura_electronica: "Pago de Factura Electronica",
@@ -182,12 +183,21 @@ export const getBaseAntesIva = (movimiento) => {
 };
 
 export const getValor125 = (movimiento) => {
-  if (movimiento?.tipo_movimiento !== "pago_factura_electronica") return 0;
+  if (
+    !["factura_venta", "pago_factura_electronica"].includes(
+      movimiento?.tipo_movimiento,
+    )
+  )
+    return 0;
   return Math.round(getBaseAntesIva(movimiento) * 0.0125);
 };
 
 export const isIngreso = (tipo) =>
-  ["pago_factura_electronica", "pago_facturas_remision"].includes(tipo);
+  [
+    "factura_venta",
+    "pago_factura_electronica",
+    "pago_facturas_remision",
+  ].includes(tipo);
 
 export const isEgreso = (tipo) =>
   [

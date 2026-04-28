@@ -14,10 +14,6 @@ import Modal from "../../../components/ui/Modal";
 import Badge from "../../../components/ui/Badge";
 import { movimientosService } from "../services/movimientosService";
 import {
-  TIPOS_MOVIMIENTO_BANCARIOS,
-  TIPOS_MOVIMIENTO_BANCARIOS_VALUES,
-} from "../constants";
-import {
   formatCurrency,
   formatDate,
   getTipoMovimientoLabel,
@@ -33,6 +29,7 @@ const LOGS_PAGE_SIZE = 30;
 export default function MovimientosPage() {
   const currentMonth = formatDateInput(new Date()).slice(0, 7);
   const [movimientos, setMovimientos] = useState([]);
+  const [tiposMovimiento, setTiposMovimiento] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [movimientoEditando, setMovimientoEditando] = useState(null);
@@ -76,12 +73,20 @@ export default function MovimientosPage() {
   const loadMovimientos = async () => {
     try {
       setLoading(true);
-      const data = await movimientosService.getAll({
-        ...filtros,
-        ...getMonthRange(mesFiltro),
-      });
+      const [data, tipos] = await Promise.all([
+        movimientosService.getAll({
+          ...filtros,
+          ...getMonthRange(mesFiltro),
+        }),
+        movimientosService.getTiposMovimientoDisponibles(),
+      ]);
+
+      const tiposValidos =
+        tipos && tipos.length > 0 ? tipos : ["factura_venta"];
+      setTiposMovimiento(tiposValidos);
+
       const bancarios = (data || []).filter((movimiento) =>
-        TIPOS_MOVIMIENTO_BANCARIOS_VALUES.includes(movimiento.tipo_movimiento),
+        tiposValidos.includes(movimiento.tipo_movimiento),
       );
       setMovimientos(bancarios);
 
@@ -348,9 +353,9 @@ export default function MovimientosPage() {
               className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
             >
               <option value="">Todos los movimientos</option>
-              {TIPOS_MOVIMIENTO_BANCARIOS.map((tipo) => (
-                <option key={tipo.value} value={tipo.value}>
-                  {tipo.label}
+              {tiposMovimiento.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {getTipoMovimientoLabel(tipo)}
                 </option>
               ))}
             </select>

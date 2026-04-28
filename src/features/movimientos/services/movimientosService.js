@@ -8,6 +8,11 @@ import {
 
 const normalizeMovimiento = (movimiento) => ({
   ...movimiento,
+  descripcion:
+    movimiento.descripcion?.trim() ||
+    movimiento.observaciones?.trim() ||
+    movimiento.tipo_movimiento ||
+    "Movimiento financiero",
   categoria_id: movimiento.categoria_id || null,
   cliente_proveedor: movimiento.cliente_proveedor || null,
   observaciones: movimiento.observaciones || null,
@@ -44,6 +49,19 @@ const applyCuentaImpacto = async (cuentaId, impacto) => {
 };
 
 export const movimientosService = {
+  async getTiposMovimientoDisponibles() {
+    const { data, error } = await supabase
+      .from("movimientos_financieros")
+      .select("tipo_movimiento")
+      .order("tipo_movimiento", { ascending: true });
+
+    if (error) throw error;
+
+    return Array.from(
+      new Set((data || []).map((row) => row.tipo_movimiento).filter(Boolean)),
+    );
+  },
+
   // Obtener todos los movimientos con filtros
   async getAll(filtros = {}) {
     let query = supabase.from("movimientos_financieros").select(`
@@ -187,7 +205,11 @@ export const movimientosService = {
       }
       stats.iva += getSumableIva(m);
       if (isIngreso(m.tipo_movimiento)) stats.valor125 += getValor125(m);
-      if (m.tipo_movimiento === "pago_factura_electronica") {
+      if (
+        ["factura_venta", "pago_factura_electronica"].includes(
+          m.tipo_movimiento,
+        )
+      ) {
         stats.facturas += 1;
       }
     });
@@ -210,7 +232,7 @@ export const movimientosService = {
   async getFacturas(filtros = {}) {
     return this.getAll({
       ...filtros,
-      tipoMovimiento: "pago_factura_electronica",
+      tipoMovimiento: "factura_venta",
     });
   },
 

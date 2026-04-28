@@ -3,14 +3,13 @@ import { useEffect, useState } from "react";
 import Input, { Select, Textarea } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
-import { TIPOS_MOVIMIENTO_BANCARIOS } from "../constants";
+import { movimientosService } from "../services/movimientosService";
+import { getTipoMovimientoLabel } from "../../../lib/utils";
 
 const ESTADOS = [
   { value: "pendiente", label: "Pendiente" },
   { value: "pagado", label: "Pagado" },
 ];
-
-const TIPO_MOVIMIENTO_DEFAULT = TIPOS_MOVIMIENTO_BANCARIOS[0]?.value || "";
 
 export default function MovimientoForm({
   movimiento,
@@ -19,29 +18,33 @@ export default function MovimientoForm({
   onCancel,
 }) {
   const [cuentas, setCuentas] = useState([]);
+  const [tiposMovimiento, setTiposMovimiento] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split("T")[0],
-    tipo_movimiento: initialData.tipo_movimiento || TIPO_MOVIMIENTO_DEFAULT,
+    tipo_movimiento: initialData.tipo_movimiento || "factura_venta",
     cuenta_id: initialData.cuenta_id || "",
     valor_total: initialData.valor_total || 0,
     estado: initialData.estado || "pendiente",
+    descripcion: initialData.descripcion || "",
     observaciones: initialData.observaciones || "",
   });
 
   useEffect(() => {
     loadCuentas();
+    loadTiposMovimiento();
   }, []);
 
   useEffect(() => {
     if (movimiento) {
       setFormData({
         fecha: movimiento.fecha || new Date().toISOString().split("T")[0],
-        tipo_movimiento: movimiento.tipo_movimiento || TIPO_MOVIMIENTO_DEFAULT,
+        tipo_movimiento: movimiento.tipo_movimiento || "factura_venta",
         cuenta_id: movimiento.cuenta_id || "",
         valor_total: movimiento.valor_total || 0,
         estado: movimiento.estado || "pendiente",
+        descripcion: movimiento.descripcion || "",
         observaciones: movimiento.observaciones || "",
       });
     }
@@ -53,6 +56,16 @@ export default function MovimientoForm({
       setCuentas(data || []);
     } catch (error) {
       console.error("Error cargando cuentas:", error);
+    }
+  };
+
+  const loadTiposMovimiento = async () => {
+    try {
+      const data = await movimientosService.getTiposMovimientoDisponibles();
+      setTiposMovimiento(data || []);
+    } catch (error) {
+      console.error("Error cargando tipos de movimiento:", error);
+      setTiposMovimiento(["factura_venta"]);
     }
   };
 
@@ -77,6 +90,9 @@ export default function MovimientoForm({
     if (!formData.tipo_movimiento)
       newErrors.tipo_movimiento = "El tipo es requerido";
     if (!formData.cuenta_id) newErrors.cuenta_id = "La cuenta es requerida";
+    if (!formData.descripcion?.trim()) {
+      newErrors.descripcion = "La descripcion es requerida";
+    }
     if (!formData.valor_total || Number(formData.valor_total) <= 0) {
       newErrors.valor_total = "El valor debe ser mayor a 0";
     }
@@ -108,6 +124,12 @@ export default function MovimientoForm({
       ? saldoActualCuenta - (Number(formData.valor_total) || 0)
       : saldoActualCuenta;
 
+  const tiposSelect =
+    tiposMovimiento.length > 0 ? tiposMovimiento : ["factura_venta"];
+  const tiposParaMostrar = movimiento?.tipo_movimiento
+    ? Array.from(new Set([movimiento.tipo_movimiento, ...tiposSelect]))
+    : tiposSelect;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -129,9 +151,9 @@ export default function MovimientoForm({
           error={errors.tipo_movimiento}
           required
         >
-          {TIPOS_MOVIMIENTO_BANCARIOS.map((tipo) => (
-            <option key={tipo.value} value={tipo.value}>
-              {tipo.label}
+          {tiposParaMostrar.map((tipo) => (
+            <option key={tipo} value={tipo}>
+              {getTipoMovimientoLabel(tipo)}
             </option>
           ))}
         </Select>
@@ -178,6 +200,16 @@ export default function MovimientoForm({
           ))}
         </Select>
       </div>
+
+      <Input
+        label="Descripción"
+        name="descripcion"
+        value={formData.descripcion}
+        onChange={handleChange}
+        error={errors.descripcion}
+        placeholder="Descripción del movimiento"
+        required
+      />
 
       {cuentaSeleccionada && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">

@@ -11,6 +11,16 @@ import {
   Download,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import Card, {
   CardHeader,
   CardTitle,
@@ -25,12 +35,88 @@ import {
   getDateRange,
   getTipoMovimientoLabel,
   isIngreso,
+  isEgreso,
 } from "../../../lib/utils";
 import { exportToExcel } from "../../../lib/exportExcel";
+
+const chartTooltipStyle = {
+  backgroundColor: "white",
+  border: "1px solid rgb(226 232 240)",
+  borderRadius: "0.75rem",
+  boxShadow: "0 10px 15px -3px rgb(15 23 42 / 0.1)",
+  padding: "0.75rem",
+};
+
+const buildMonthlyChart = (movimientos) => {
+  const year = new Date().getFullYear();
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(Date.UTC(year, index, 1));
+    return {
+      name: date.toLocaleDateString("es-CO", {
+        month: "short",
+        year: "numeric",
+      }),
+      Ingresos: 0,
+      Gastos: 0,
+      Utilidad: 0,
+    };
+  });
+
+  [...(movimientos || [])]
+    .filter((mov) => mov?.fecha && mov.estado === "pagado")
+    .forEach((mov) => {
+      const date = new Date(`${mov.fecha}T00:00:00`);
+      if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
+
+      const monthIndex = date.getMonth();
+      const valor = Math.abs(mov.valor_total || 0);
+
+      if (isIngreso(mov.tipo_movimiento)) {
+        months[monthIndex].Ingresos += valor;
+      } else if (isEgreso(mov.tipo_movimiento)) {
+        months[monthIndex].Gastos += valor;
+      }
+    });
+
+  return months.map((item) => ({
+    ...item,
+    Utilidad: item.Ingresos - item.Gastos,
+  }));
+};
+
+const buildAccountsChart = (cuentas) =>
+  [...(cuentas || [])]
+    .map((cuenta) => ({
+      name: cuenta.nombre,
+      saldo: Number(cuenta.saldo_actual) || 0,
+    }))
+    .sort((a, b) => b.saldo - a.saldo);
+
+const DashboardTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div style={chartTooltipStyle}>
+      <p className="text-sm font-semibold text-slate-800 mb-2">{label}</p>
+      <div className="space-y-1">
+        {payload.map((entry) => (
+          <p
+            key={entry.name}
+            className="text-sm"
+            style={{ color: entry.color }}
+          >
+            {entry.name}: {formatCurrency(entry.value)}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [cuentas, setCuentas] = useState([]);
+  const [movimientosAnio, setMovimientosAnio] = useState([]);
   const [movimientosRecientes, setMovimientosRecientes] = useState([]);
   const [stats, setStats] = useState({
     ingresos: 0,
@@ -48,19 +134,27 @@ export default function DashboardHome() {
     try {
       setLoading(true);
 
-      const cuentasData = await cuentasService.getActivas();
-      setCuentas(cuentasData);
-
-      const movimientosData = await movimientosService.getAll({});
-      setMovimientosRecientes(movimientosData.slice(0, 5));
-
       const mesActual = getDateRange("month");
-      const statsData = await movimientosService.getEstadisticas(
-        mesActual.start.toISOString().split("T")[0],
-        mesActual.end.toISOString().split("T")[0],
-      );
+      const anioActual = getDateRange("year");
 
-      const saldoTotal = cuentasData.reduce(
+      const [cuentasData, movimientosData, statsData] = await Promise.all([
+        cuentasService.getActivas(),
+        movimientosService.getAll({
+          fechaInicio: anioActual.start.toISOString().split("T")[0],
+          fechaFin: anioActual.end.toISOString().split("T")[0],
+          ordenarPor: "fecha_desc",
+        }),
+        movimientosService.getEstadisticas(
+          mesActual.start.toISOString().split("T")[0],
+          mesActual.end.toISOString().split("T")[0],
+        ),
+      ]);
+
+      setCuentas(cuentasData || []);
+      setMovimientosAnio(movimientosData || []);
+      setMovimientosRecientes((movimientosData || []).slice(0, 6));
+
+      const saldoTotal = (cuentasData || []).reduce(
         (sum, c) => sum + (c.saldo_actual || 0),
         0,
       );
@@ -77,6 +171,8 @@ export default function DashboardHome() {
   };
 
   const utilidad = stats.ingresos - stats.egresos;
+  const monthlyChartData = buildMonthlyChart(movimientosAnio);
+  const accountsChartData = buildAccountsChart(cuentas);
 
   const handleExport = () => {
     const rows = [
@@ -164,7 +260,7 @@ export default function DashboardHome() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
             <div className="p-2 sm:p-3 bg-green-100 rounded-lg shrink-0">
@@ -172,10 +268,13 @@ export default function DashboardHome() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-slate-600">
-                Ingresos del mes
+                Ingresos totales
               </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
                 {formatCurrency(stats.ingresos)}
+              </p>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+                Movimientos pagados del mes actual
               </p>
             </div>
           </CardContent>
@@ -188,10 +287,13 @@ export default function DashboardHome() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-slate-600">
-                Egresos del mes
+                Gastos totales
               </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
                 {formatCurrency(stats.egresos)}
+              </p>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+                Movimientos pagados del mes actual
               </p>
             </div>
           </CardContent>
@@ -217,6 +319,9 @@ export default function DashboardHome() {
               >
                 {formatCurrency(utilidad)}
               </p>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+                Ingresos menos gastos del mes actual
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -234,9 +339,118 @@ export default function DashboardHome() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="w-full">
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
+            <div className="p-2 sm:p-3 bg-slate-100 rounded-lg shrink-0">
+              <Wallet className="text-slate-600 w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-slate-600">
+                Cuentas activas
+              </p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+                {cuentas.length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Second row */}
+      {/* Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-base sm:text-lg">
+              Ingresos, gastos y utilidad por mes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-80 sm:h-96">
+            {monthlyChartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                No hay datos suficientes para graficar el año en curso.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyChartData} barCategoryGap={20}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                  />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Legend />
+                  <Bar
+                    dataKey="Ingresos"
+                    fill="#16a34a"
+                    radius={[6, 6, 0, 0]}
+                  />
+                  <Bar dataKey="Egresos" fill="#dc2626" radius={[6, 6, 0, 0]} />
+                  <Bar
+                    dataKey="Utilidad"
+                    fill="#2563eb"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base sm:text-lg">
+                Saldos de cuentas
+              </CardTitle>
+              <Link
+                to="/cuentas"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                Ver cuentas <ArrowRight size={14} />
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="h-80 sm:h-96">
+            {accountsChartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                No hay cuentas activas para mostrar.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={accountsChartData}
+                  layout="vertical"
+                  barCategoryGap={12}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                  />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={120}
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                  />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Legend />
+                  <Bar
+                    dataKey="saldo"
+                    name="Saldo"
+                    fill="#2563eb"
+                    radius={[0, 6, 6, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumen y movimientos recientes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Saldo por cuenta */}
         <Card className="w-full">
