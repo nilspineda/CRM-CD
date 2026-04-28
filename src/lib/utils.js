@@ -104,48 +104,63 @@ export const getTipoCuentaLabel = (tipo) => {
 };
 
 export const getTipoMovimientoLabel = (tipo) => {
-  const labels = {
-    factura_venta: "Factura de venta",
-    pago_iva: "PAGO DE IVA",
-    pago_ica: "PAGO DE ICA",
-    pago_factura_electronica: "Pago de Factura Electronica",
-    pago_facturas_remision: "Pago Factuiras Remision",
-    servicios_agua_1p: "SERVICIOS PUBLICOS 1 PISO - AGUA",
-    servicios_luz_1p: "SERVICIOS PUBLICOS 1 PISO - LUZ",
-    servicios_gas_1p: "SERVICIOS PUBLICOS 1 PISO - GAS",
-    arriendo_2p: "ARRIENDO 2 PISO",
-    arriendo_1p: "ARRIENDO 1 PISO",
-    servicios_agua_2p: "SERVICIOS PUBLICOS 2 PISO - AGUA",
-    servicios_luz_2p: "SERVICIOS PUBLICOS 2 PISO - LUZ",
-    servicios_gas_2p: "SERVICIOS PUBLICOS 2 PISO - GAS",
-    domicilios: "DOMICILIOS",
-    insumos: "INSUMOS",
-    movistar_celulares: "MOVISTAR- CELULARES",
-    movistar_internet: "MOVISTAR INTERNET",
-    mojica_impresiones: "MOJICA IMPRESIONES DIGITALES",
-    impresion_litografia: "IMPRESIÓN LITOGRAFIA",
-    acabados: "ACABADOS",
-    pago_dias_trabajo: "PAGO X DIAS DE TRABAJO",
-    pago_nomina_javier: "PAGO DE NOMINA JAVIER",
-    seguridad_social: "SEGURIDAD SOCIAL",
-    creditos_bancos: "CREDITOS - BANCOS",
-    gastos_familia_moreno: "GASTOS FAMILIA MORENO PINEDA",
-    montajes_litograficos: "MONTAJES LITOGRAFICOS",
-    compra_herramienta: "COMPRA DE HERRAMIENTA",
-    pago_nomina_carolina: "PAGO DE NOMINA CAROLINA",
-    pago_nomina_nils: "PAGO DE NOMINA NILS",
-    pago_nomina_edinson: "PAGO DE NOMINA EDINSON",
-    pago_nomina_jerson: "PAGO DE NOMINA JERSON",
-    pago_nomina_yurley: "PAGO DE NOMINA YURLEY",
-    insumos_acrilicos: "INSUMOS ACRILICOS",
-    insumos_adhesivos_lonas: "INSUMOS ADHESIVOS Y LONAS",
-    insumos_electricos: "INSUMOS ELECTRICOS",
-    insumos_mdf: "INSUMOS MDF",
-    servicio_indriver: "SERVICIO DE INDRIVER",
-    servicio_contable: "SERVICIO CONTABLE",
-    insumo_plotter: "INSUMO PLOTTER",
-  };
-  return labels[tipo] || tipo;
+  return TIPO_MOVIMIENTO_LABELS[tipo] || tipo;
+};
+
+// Mapa de etiquetas para tipos de movimiento (clave -> etiqueta legible)
+export const TIPO_MOVIMIENTO_LABELS = {
+  factura_venta: "Factura de venta",
+  pago_iva: "PAGO DE IVA",
+  pago_ica: "PAGO DE ICA",
+  pago_factura_electronica: "Pago de Factura Electronica",
+  pago_facturas_remision: "Pago Factuiras Remision",
+  servicios_agua_1p: "SERVICIOS PUBLICOS 1 PISO - AGUA",
+  servicios_luz_1p: "SERVICIOS PUBLICOS 1 PISO - LUZ",
+  servicios_gas_1p: "SERVICIOS PUBLICOS 1 PISO - GAS",
+  arriendo_2p: "ARRIENDO 2 PISO",
+  arriendo_1p: "ARRIENDO 1 PISO",
+  servicios_agua_2p: "SERVICIOS PUBLICOS 2 PISO - AGUA",
+  servicios_luz_2p: "SERVICIOS PUBLICOS 2 PISO - LUZ",
+  servicios_gas_2p: "SERVICIOS PUBLICOS 2 PISO - GAS",
+  domicilios: "DOMICILIOS",
+  insumos: "INSUMOS",
+  movistar_celulares: "MOVISTAR- CELULARES",
+  movistar_internet: "MOVISTAR INTERNET",
+  mojica_impresiones: "MOJICA IMPRESIONES DIGITALES",
+  impresion_litografia: "IMPRESIÓN LITOGRAFIA",
+  acabados: "ACABADOS",
+  pago_dias_trabajo: "PAGO X DIAS DE TRABAJO",
+  pago_nomina_javier: "PAGO DE NOMINA JAVIER",
+  seguridad_social: "SEGURIDAD SOCIAL",
+  creditos_bancos: "CREDITOS - BANCOS",
+  gastos_familia_moreno: "GASTOS FAMILIA MORENO PINEDA",
+  montajes_litograficos: "MONTAJES LITOGRAFICOS",
+  compra_herramienta: "COMPRA DE HERRAMIENTA",
+  pago_nomina_carolina: "PAGO DE NOMINA CAROLINA",
+  pago_nomina_nils: "PAGO DE NOMINA NILS",
+  pago_nomina_edinson: "PAGO DE NOMINA EDINSON",
+  pago_nomina_jerson: "PAGO DE NOMINA JERSON",
+  pago_nomina_yurley: "PAGO DE NOMINA YURLEY",
+  insumos_acrilicos: "INSUMOS ACRILICOS",
+  insumos_adhesivos_lonas: "INSUMOS ADHESIVOS Y LONAS",
+  insumos_electricos: "INSUMOS ELECTRICOS",
+  insumos_mdf: "INSUMOS MDF",
+  servicio_indriver: "SERVICIO DE INDRIVER",
+  servicio_contable: "SERVICIO CONTABLE",
+  insumo_plotter: "INSUMO PLOTTER",
+};
+
+// Invertir mapeo para reconocer cuando la BD almacena la etiqueta legible
+const _invertLabels = Object.keys(TIPO_MOVIMIENTO_LABELS).reduce((acc, key) => {
+  acc[TIPO_MOVIMIENTO_LABELS[key]] = key;
+  return acc;
+}, {});
+
+export const normalizeTipoMovimiento = (valor) => {
+  if (!valor) return valor;
+  if (TIPO_MOVIMIENTO_LABELS[valor]) return valor; // ya es clave
+  if (_invertLabels[valor]) return _invertLabels[valor]; // es etiqueta legible
+  return valor; // no conocido, devolver tal cual
 };
 
 export const getEstadoLabel = (estado) => {

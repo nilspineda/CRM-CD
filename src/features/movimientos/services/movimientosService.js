@@ -4,6 +4,7 @@ import {
   getValor125,
   isEgreso,
   isIngreso,
+  normalizeTipoMovimiento,
 } from "../../../lib/utils";
 
 const normalizeMovimiento = (movimiento) => ({
@@ -57,9 +58,12 @@ export const movimientosService = {
 
     if (error) throw error;
 
-    return Array.from(
+    const tipos = Array.from(
       new Set((data || []).map((row) => row.tipo_movimiento).filter(Boolean)),
     );
+
+    // Normalizar valores (la BD a veces almacena la etiqueta legible)
+    return tipos.map((t) => normalizeTipoMovimiento(t));
   },
 
   // Obtener todos los movimientos con filtros
@@ -100,7 +104,12 @@ export const movimientosService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data;
+
+    // Normalizar tipo_movimiento en cada fila para usar claves canónicas
+    return (data || []).map((row) => ({
+      ...row,
+      tipo_movimiento: normalizeTipoMovimiento(row.tipo_movimiento),
+    }));
   },
 
   // Obtener un movimiento por ID
@@ -118,7 +127,10 @@ export const movimientosService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      tipo_movimiento: normalizeTipoMovimiento(data.tipo_movimiento),
+    };
   },
 
   // Crear movimiento
