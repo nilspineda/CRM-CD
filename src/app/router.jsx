@@ -1,16 +1,17 @@
 // filepath: src/app/router.jsx
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import CuentasPage from '../features/cuentas/pages/CuentasPage';
-import MovimientosPage from '../features/movimientos/pages/MovimientosPage';
-import DashboardHome from '../features/dashboard/pages/DashboardHome';
-import FacturasPage from '../features/facturas/pages/FacturasPage';
-import IvaPage from '../features/iva/pages/IvaPage';
-import ReportesPage from '../features/reportes/pages/ReportesPage';
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import CuentasPage from "../features/cuentas/pages/CuentasPage";
+import ClientesPage from "../features/clientes/pages/ClientesPage";
+import MovimientosPage from "../features/movimientos/pages/MovimientosPage";
+import DashboardHome from "../features/dashboard/pages/DashboardHome";
+import FacturasPage from "../features/facturas/pages/FacturasPage";
+import IvaPage from "../features/iva/pages/IvaPage";
+import ReportesPage from "../features/reportes/pages/ReportesPage";
 
 const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
     element: <DashboardLayout />,
     children: [
       {
@@ -18,27 +19,31 @@ const router = createBrowserRouter([
         element: <Navigate to="/dashboard" replace />,
       },
       {
-        path: 'dashboard',
+        path: "dashboard",
         element: <DashboardHome />,
       },
       {
-        path: 'cuentas',
+        path: "cuentas",
         element: <CuentasPage />,
       },
       {
-        path: 'movimientos',
+        path: "clientes",
+        element: <ClientesPage />,
+      },
+      {
+        path: "movimientos",
         element: <MovimientosPage />,
       },
       {
-        path: 'facturas',
+        path: "facturas",
         element: <FacturasPage />,
       },
       {
-        path: 'iva',
+        path: "iva",
         element: <IvaPage />,
       },
       {
-        path: 'reportes',
+        path: "reportes",
         element: <ReportesPage />,
       },
     ],
