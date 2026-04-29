@@ -1,5 +1,6 @@
 // filepath: src/features/cuentas/pages/CuentasPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Wallet, Search, TrendingUp, Download } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
@@ -10,40 +11,79 @@ import { formatCurrency, getTipoCuentaLabel } from '../../../lib/utils';
 import { exportToExcel } from '../../../lib/exportExcel';
 import CuentaForm from '../components/CuentaForm';
 
+const PAGE_SIZE = 20;
+
 export default function CuentasPage() {
-  const [cuentas, setCuentas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [cuentaEditando, setCuentaEditando] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadCuentas();
-  }, []);
+  const { data: cuentas = [], isLoading } = useQuery({
+    queryKey: ['cuentas'],
+    queryFn: cuentasService.getAll,
+  });
 
-  const loadCuentas = async () => {
-    try {
-      setLoading(true);
-      const data = await cuentasService.getAll();
-      setCuentas(data);
-    } catch (error) {
-      console.error('Error cargando cuentas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const crearMutate = useMutation({
+    mutationFn: cuentasService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cuentas'] });
+    },
+  });
+
+  const actualizarMutate = useMutation({
+    mutationFn: ({ id, data }) => cuentasService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cuentas'] });
+    },
+  });
+
+  const eliminarMutate = useMutation({
+    mutationFn: cuentasService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cuentas'] });
+    },
+  });
+
+  const activarMutate = useMutation({
+    mutationFn: cuentasService.activate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cuentas'] });
+    },
+  });
+
+  const cuentasFiltradas = useMemo(() => {
+    return cuentas.filter(cuenta => {
+      const matchesSearch = cuenta.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesEstado = filtroEstado === 'todos' 
+        ? true 
+        : filtroEstado === 'activa' 
+          ? cuenta.estado 
+          : !cuenta.estado;
+      return matchesSearch && matchesEstado;
+    });
+  }, [cuentas, searchTerm, filtroEstado]);
+
+  const totalPages = Math.ceil(cuentasFiltradas.length / PAGE_SIZE);
+  const cuentasPaginadas = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return cuentasFiltradas.slice(start, start + PAGE_SIZE);
+  }, [cuentasFiltradas, page]);
+
+  const cuentasActivas = useMemo(() => cuentas.filter(c => c.estado), [cuentas]);
+  const saldoTotal = useMemo(() => cuentasActivas.reduce((sum, c) => sum + (c.saldo_actual || 0), 0), [cuentasActivas]);
 
   const handleSave = async (cuentaData) => {
     try {
       if (cuentaEditando) {
-        await cuentasService.update(cuentaEditando.id, cuentaData);
+        await actualizarMutate.mutateAsync({ id: cuentaEditando.id, data: cuentaData });
       } else {
-        await cuentasService.create(cuentaData);
+        await crearMutate.mutateAsync(cuentaData);
       }
       setModalOpen(false);
       setCuentaEditando(null);
-      loadCuentas();
     } catch (error) {
       console.error('Error guardando cuenta:', error);
       alert('Error al guardar la cuenta');
@@ -60,8 +100,7 @@ export default function CuentasPage() {
       return;
     }
     try {
-      await cuentasService.delete(cuenta.id);
-      loadCuentas();
+      await eliminarMutate.mutateAsync(cuenta.id);
     } catch (error) {
       console.error('Error eliminando cuenta:', error);
     }
@@ -69,36 +108,10 @@ export default function CuentasPage() {
 
   const handleActivate = async (cuenta) => {
     try {
-      await cuentasService.activate(cuenta.id);
-      loadCuentas();
+      await activarMutate.mutateAsync(cuenta.id);
     } catch (error) {
       console.error('Error activando cuenta:', error);
     }
-  };
-
-  const cuentasFiltradas = cuentas.filter(cuenta => {
-    const matchesSearch = cuenta.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEstado = filtroEstado === 'todos' 
-      ? true 
-      : filtroEstado === 'activa' 
-        ? cuenta.estado 
-        : !cuenta.estado;
-    return matchesSearch && matchesEstado;
-  });
-
-  const cuentasActivas = cuentas.filter(c => c.estado);
-  const saldoTotal = cuentasActivas.reduce((sum, c) => sum + (c.saldo_actual || 0), 0);
-
-  const getTipoColor = (tipo) => {
-    const colors = {
-      caja: 'bg-purple-100 text-purple-700',
-      banco: 'bg-blue-100 text-blue-700',
-      billetera_digital: 'bg-green-100 text-green-700',
-      ahorro: 'bg-yellow-100 text-yellow-700',
-      efectivo: 'bg-orange-100 text-orange-700',
-      otra: 'bg-slate-100 text-slate-700',
-    };
-    return colors[tipo] || colors.otra;
   };
 
   const handleExport = () => {
@@ -117,16 +130,21 @@ export default function CuentasPage() {
     });
   };
 
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  const isMutating = crearMutate.isPending || actualizarMutate.isPending || eliminarMutate.isPending || activarMutate.isPending;
+
   return (
     <div className="space-y-4 sm:space-y-6 w-full">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 w-full">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">Cuentas Financieras</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">Administra tus cuentas bancarias, cajas y billeteras</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <Button variant="outline" onClick={handleExport} disabled={loading || cuentasFiltradas.length === 0} className="shrink-0">
+          <Button variant="outline" onClick={handleExport} disabled={isLoading || cuentasFiltradas.length === 0} className="shrink-0">
             <Download size={16} className="mr-1 sm:mr-2" />
             Excel
           </Button>
@@ -138,7 +156,6 @@ export default function CuentasPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
@@ -175,7 +192,6 @@ export default function CuentasPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
       <Card className="w-full">
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -185,13 +201,13 @@ export default function CuentasPage() {
                 type="text"
                 placeholder="Buscar cuentas..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                 className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
             <select
               value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
+              onChange={(e) => { setFiltroEstado(e.target.value); setPage(1); }}
               className="px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white min-w-[140px]"
             >
               <option value="todos">Todos</option>
@@ -202,7 +218,6 @@ export default function CuentasPage() {
         </CardContent>
       </Card>
 
-      {/* Tabla de cuentas */}
       <Card className="w-full overflow-hidden">
         <div className="overflow-x-auto mobile-card-table">
           <table className="min-w-full divide-y divide-slate-200">
@@ -217,20 +232,20 @@ export default function CuentasPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500">
                     Cargando...
                   </td>
                 </tr>
-              ) : cuentasFiltradas.length === 0 ? (
+              ) : cuentasPaginadas.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500">
                     No hay cuentas que mostrar
                   </td>
                 </tr>
               ) : (
-                cuentasFiltradas.map((cuenta) => (
+                cuentasPaginadas.map((cuenta) => (
                   <tr key={cuenta.id} className="hover:bg-slate-50">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="sm:hidden text-xs text-slate-500 mb-1">Nombre</div>
@@ -264,7 +279,8 @@ export default function CuentasPage() {
                       <div className="flex justify-end gap-1 sm:gap-2">
                         <button
                           onClick={() => handleEdit(cuenta)}
-                          className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          disabled={isMutating}
+                          className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -272,7 +288,8 @@ export default function CuentasPage() {
                         {cuenta.estado ? (
                           <button
                             onClick={() => handleDelete(cuenta)}
-                            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            disabled={isMutating}
+                            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
                             title="Inactivar"
                           >
                             <Trash2 size={16} />
@@ -280,7 +297,8 @@ export default function CuentasPage() {
                         ) : (
                           <button
                             onClick={() => handleActivate(cuenta)}
-                            className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                            disabled={isMutating}
+                            className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50"
                             title="Activar"
                           >
                             <Plus size={16} />
@@ -294,9 +312,32 @@ export default function CuentasPage() {
             </tbody>
           </table>
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+            <div className="text-sm text-slate-600">
+              Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, cuentasFiltradas.length)} de {cuentasFiltradas.length}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
-      {/* Modal para crear/editar cuenta */}
       <Modal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setCuentaEditando(null); }}
@@ -311,4 +352,16 @@ export default function CuentasPage() {
       </Modal>
     </div>
   );
+}
+
+function getTipoColor(tipo) {
+  const colors = {
+    caja: 'bg-purple-100 text-purple-700',
+    banco: 'bg-blue-100 text-blue-700',
+    billetera_digital: 'bg-green-100 text-green-700',
+    ahorro: 'bg-yellow-100 text-yellow-700',
+    efectivo: 'bg-orange-100 text-orange-700',
+    otra: 'bg-slate-100 text-slate-700',
+  };
+  return colors[tipo] || colors.otra;
 }

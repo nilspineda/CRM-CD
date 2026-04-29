@@ -1,48 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Users } from "lucide-react";
-import Card, { CardContent } from "../../../components/ui/Card";
-import Button from "../../../components/ui/Button";
-import Modal from "../../../components/ui/Modal";
-import Badge from "../../../components/ui/Badge";
-import Input, { Textarea } from "../../../components/ui/Input";
-import { clientesService } from "../services/clientesService";
+// filepath: src/features/clientes/pages/ClientesPage.jsx
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Users } from 'lucide-react';
+import Card, { CardContent } from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
+import Modal from '../../../components/ui/Modal';
+import Badge from '../../../components/ui/Badge';
+import Input, { Textarea } from '../../../components/ui/Input';
+import { clientesService } from '../services/clientesService';
 
 const emptyForm = {
-  nit: "",
-  nombre: "",
-  telefono: "",
-  correo: "",
-  direccion: "",
-  responsable: "",
-  fecha_cumpleaños: "",
-  observaciones: "",
+  nit: '',
+  nombre: '',
+  telefono: '',
+  correo: '',
+  direccion: '',
+  responsable: '',
+  fecha_cumpleaños: '',
+  observaciones: '',
   estado: true,
 };
 
+const PAGE_SIZE = 20;
+
 export default function ClientesPage() {
-  const [loading, setLoading] = useState(true);
-  const [clientes, setClientes] = useState([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadClientes();
-  }, []);
+  const { data: clientes = [], isLoading } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: clientesService.getAll,
+  });
 
-  const loadClientes = async () => {
-    try {
-      setLoading(true);
-      const data = await clientesService.getAll();
-      setClientes(data || []);
-    } catch (error) {
-      console.error("Error cargando clientes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const crearMutate = useMutation({
+    mutationFn: clientesService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+    },
+  });
+
+  const actualizarMutate = useMutation({
+    mutationFn: ({ id, data }) => clientesService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+    },
+  });
 
   const clientesFiltrados = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -59,6 +66,12 @@ export default function ClientesPage() {
         .some((value) => String(value).toLowerCase().includes(text));
     });
   }, [clientes, query]);
+
+  const totalPages = Math.ceil(clientesFiltrados.length / PAGE_SIZE);
+  const clientesPaginados = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return clientesFiltrados.slice(start, start + PAGE_SIZE);
+  }, [clientesFiltrados, page]);
 
   const stats = useMemo(() => {
     return clientes.reduce(
@@ -77,14 +90,14 @@ export default function ClientesPage() {
     setForm(
       cliente
         ? {
-            nit: cliente.nit || "",
-            nombre: cliente.nombre || "",
-            telefono: cliente.telefono || "",
-            correo: cliente.correo || "",
-            direccion: cliente.direccion || "",
-            responsable: cliente.responsable || "",
-            fecha_cumpleaños: cliente.fecha_cumpleaños || "",
-            observaciones: cliente.observaciones || "",
+            nit: cliente.nit || '',
+            nombre: cliente.nombre || '',
+            telefono: cliente.telefono || '',
+            correo: cliente.correo || '',
+            direccion: cliente.direccion || '',
+            responsable: cliente.responsable || '',
+            fecha_cumpleaños: cliente.fecha_cumpleaños || '',
+            observaciones: cliente.observaciones || '',
             estado: cliente.estado !== false,
           }
         : emptyForm,
@@ -102,8 +115,8 @@ export default function ClientesPage() {
     event.preventDefault();
     const nextErrors = {};
 
-    if (!form.nit) nextErrors.nit = "El NIT es obligatorio";
-    if (!form.nombre) nextErrors.nombre = "El nombre es obligatorio";
+    if (!form.nit) nextErrors.nit = 'El NIT es obligatorio';
+    if (!form.nombre) nextErrors.nombre = 'El nombre es obligatorio';
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -124,16 +137,15 @@ export default function ClientesPage() {
       };
 
       if (selectedCliente) {
-        await clientesService.update(selectedCliente.id, payload);
+        await actualizarMutate.mutateAsync({ id: selectedCliente.id, data: payload });
       } else {
-        await clientesService.create(payload);
+        await crearMutate.mutateAsync(payload);
       }
 
       closeModal();
-      loadClientes();
     } catch (error) {
-      console.error("Error guardando cliente:", error);
-      alert(error.message || "No se pudo guardar el cliente.");
+      console.error('Error guardando cliente:', error);
+      alert(error.message || 'No se pudo guardar el cliente.');
     }
   };
 
@@ -144,18 +156,23 @@ export default function ClientesPage() {
         `Cambiando estado de ${cliente.nombre} de ${cliente.estado} a ${newEstado}`,
       );
 
-      await clientesService.update(cliente.id, {
-        ...cliente,
-        estado: newEstado,
+      await actualizarMutate.mutateAsync({
+        id: cliente.id,
+        data: { ...cliente, estado: newEstado },
       });
 
-      console.log("Cliente actualizado exitosamente");
-      await loadClientes();
+      console.log('Cliente actualizado exitosamente');
     } catch (error) {
-      console.error("Error cambiando estado:", error);
+      console.error('Error cambiando estado:', error);
       alert(`Error al cambiar estado del cliente: ${error.message || error}`);
     }
   };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  const isMutating = crearMutate.isPending || actualizarMutate.isPending;
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full">
@@ -168,7 +185,7 @@ export default function ClientesPage() {
             NIT, contactos y datos base para facturación
           </p>
         </div>
-        <Button onClick={() => openModal()}>
+        <Button onClick={() => openModal()} disabled={isMutating}>
           <Plus size={16} className="mr-1 sm:mr-2" />
           Nuevo cliente
         </Button>
@@ -192,7 +209,7 @@ export default function ClientesPage() {
             />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
               placeholder="Buscar por NIT, nombre, teléfono o correo..."
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
@@ -229,7 +246,7 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -238,7 +255,7 @@ export default function ClientesPage() {
                     Cargando clientes...
                   </td>
                 </tr>
-              ) : clientesFiltrados.length === 0 ? (
+              ) : clientesPaginados.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -248,7 +265,7 @@ export default function ClientesPage() {
                   </td>
                 </tr>
               ) : (
-                clientesFiltrados.map((cliente) => (
+                clientesPaginados.map((cliente) => (
                   <tr key={cliente.id} className="hover:bg-slate-50">
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center font-medium">
                       {cliente.nit}
@@ -257,24 +274,24 @@ export default function ClientesPage() {
                       {cliente.nombre}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center">
-                      {cliente.responsable || "-"}
+                      {cliente.responsable || '-'}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center">
-                      {cliente.telefono || "-"}
+                      {cliente.telefono || '-'}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center break-all">
-                      {cliente.correo || "-"}
+                      {cliente.correo || '-'}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-center">
                       <div className="flex justify-center">
                         <Badge
                           className={
                             cliente.estado === false
-                              ? "bg-slate-100 text-slate-700"
-                              : "bg-green-100 text-green-700"
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-green-100 text-green-700'
                           }
                         >
-                          {cliente.estado === false ? "Inactivo" : "Activo"}
+                          {cliente.estado === false ? 'Inactivo' : 'Activo'}
                         </Badge>
                       </div>
                     </td>
@@ -284,6 +301,7 @@ export default function ClientesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => openModal(cliente)}
+                          disabled={isMutating}
                         >
                           Editar
                         </Button>
@@ -291,15 +309,16 @@ export default function ClientesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleToggleState(cliente)}
+                          disabled={isMutating}
                           className={
                             cliente.estado === false
-                              ? "border-green-300 text-green-700 hover:bg-green-50"
-                              : "border-red-300 text-red-700 hover:bg-red-50"
+                              ? 'border-green-300 text-green-700 hover:bg-green-50'
+                              : 'border-red-300 text-red-700 hover:bg-red-50'
                           }
                         >
                           {cliente.estado === false
-                            ? "Activar cliente"
-                            : "Desactivar cliente"}
+                            ? 'Activar cliente'
+                            : 'Desactivar cliente'}
                         </Button>
                       </div>
                     </td>
@@ -309,12 +328,36 @@ export default function ClientesPage() {
             </tbody>
           </table>
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+            <div className="text-sm text-slate-600">
+              Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, clientesFiltrados.length)} de {clientesFiltrados.length}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={selectedCliente ? "Editar cliente" : "Nuevo cliente"}
+        title={selectedCliente ? 'Editar cliente' : 'Nuevo cliente'}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -403,7 +446,7 @@ export default function ClientesPage() {
                   className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
                 <span className="text-sm font-medium text-slate-700">
-                  {form.estado ? "Cliente activo" : "Cliente inactivo"}
+                  {form.estado ? 'Cliente activo' : 'Cliente inactivo'}
                 </span>
               </label>
             </div>
@@ -425,7 +468,9 @@ export default function ClientesPage() {
             <Button type="button" variant="outline" onClick={closeModal}>
               Cancelar
             </Button>
-            <Button type="submit">Guardar</Button>
+            <Button type="submit" disabled={isMutating}>
+              Guardar
+            </Button>
           </div>
         </form>
       </Modal>
@@ -435,8 +480,8 @@ export default function ClientesPage() {
 
 function ClientStatCard({ label, value, tone }) {
   const tones = {
-    green: "bg-green-100 text-green-700",
-    slate: "bg-slate-100 text-slate-700",
+    green: 'bg-green-100 text-green-700',
+    slate: 'bg-slate-100 text-slate-700',
   };
 
   return (

@@ -1,5 +1,6 @@
 // filepath: src/features/movimientos/pages/MovimientosPage.jsx
-import { useState, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Edit2,
@@ -25,12 +26,10 @@ import { exportToExcel } from "../../../lib/exportExcel";
 import MovimientoForm from "../components/MovimientoForm";
 
 const LOGS_PAGE_SIZE = 30;
+const PAGE_SIZE = 30;
 
 export default function MovimientosPage() {
   const currentMonth = formatDateInput(new Date()).slice(0, 7);
-  const [movimientos, setMovimientos] = useState([]);
-  const [tiposMovimiento, setTiposMovimiento] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [movimientoEditando, setMovimientoEditando] = useState(null);
   const [mesFiltro, setMesFiltro] = useState(currentMonth);
@@ -41,16 +40,9 @@ export default function MovimientosPage() {
     busqueda: "",
     ordenarPor: "fecha_desc",
   });
-  const [stats, setStats] = useState({
-    totalPagado: 0,
-    cantidad: 0,
-    pendientes: 0,
-  });
-  const [logs, setLogs] = useState([]);
-  const [logsLoading, setLogsLoading] = useState(true);
-  const [logsError, setLogsError] = useState("");
+  const [page, setPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
-  const [logsCount, setLogsCount] = useState(0);
+  const queryClient = useQueryClient();
 
   const getMonthRange = (value) => {
     const [year, month] = (value || currentMonth).split("-").map(Number);
@@ -62,70 +54,93 @@ export default function MovimientosPage() {
     };
   };
 
-  useEffect(() => {
-    loadMovimientos();
-  }, [filtros, mesFiltro]);
+  const { data: tiposData = [] } = useQuery({
+    queryKey: ["movimientos", "tipos"],
+    queryFn: movimientosService.getTiposMovimientoDisponibles,
+    staleTime: Infinity,
+  });
 
-  useEffect(() => {
-    loadLogs(logsPage);
-  }, [logsPage]);
+  const { data: movimientosData = [], isLoading } = useQuery({
+    queryKey: ["movimientos", filtros, mesFiltro],
+    queryFn: () =>
+      movimientosService.getAll({
+        ...filtros,
+        ...getMonthRange(mesFiltro),
+      }),
+  });
 
-  const loadMovimientos = async () => {
-    try {
-      setLoading(true);
-      const [data, tipos] = await Promise.all([
-        movimientosService.getAll({
-          ...filtros,
-          ...getMonthRange(mesFiltro),
-        }),
-        movimientosService.getTiposMovimientoDisponibles(),
-      ]);
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ["movimientos", "logs", logsPage],
+    queryFn: () =>
+      movimientosService.getLogs({
+        page: logsPage,
+        pageSize: LOGS_PAGE_SIZE,
+      }),
+    initialData: { data: [], count: 0 },
+  });
 
-      const tiposValidos =
-        tipos && tipos.length > 0 ? tipos : ["factura_venta"];
-      setTiposMovimiento(tiposValidos);
+  const crearMutate = useMutation({
+    mutationFn: movimientosService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+    },
+  });
 
-      const bancarios = (data || []).filter((movimiento) =>
-        tiposValidos.includes(movimiento.tipo_movimiento),
-      );
-      setMovimientos(bancarios);
+  const actualizarMutate = useMutation({
+    mutationFn: ({ id, data }) => movimientosService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+    },
+  });
 
-      const statsCalc = {
-        totalPagado: 0,
-        cantidad: bancarios.length,
-        pendientes: 0,
-      };
-      bancarios.forEach((m) => {
-        if (m.estado === "pendiente") {
-          statsCalc.pendientes += 1;
-        }
-        if (m.estado === "pagado") {
-          statsCalc.totalPagado += Math.abs(m.valor_total || 0);
-        }
-      });
-      setStats(statsCalc);
-    } catch (error) {
-      console.error("Error cargando movimientos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tiposMovimiento = useMemo(
+    () => (tiposData.length > 0 ? tiposData : ["factura_venta"]),
+    [tiposData],
+  );
+
+  const movimientosFiltrados = useMemo(() => {
+    return movimientosData.filter((movimiento) =>
+      tiposMovimiento.includes(movimiento.tipo_movimiento),
+    );
+  }, [movimientosData, tiposMovimiento]);
+
+  const totalPages = Math.ceil(movimientosFiltrados.length / PAGE_SIZE);
+  const movimientosPaginados = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return movimientosFiltrados.slice(start, start + PAGE_SIZE);
+  }, [movimientosFiltrados, page]);
+
+  const stats = useMemo(() => {
+    const calc = {
+      totalPagado: 0,
+      cantidad: movimientosFiltrados.length,
+      pendientes: 0,
+    };
+    movimientosFiltrados.forEach((m) => {
+      if (m.estado === "pendiente") calc.pendientes += 1;
+      if (m.estado === "pagado") calc.totalPagado += Math.abs(m.valor_total || 0);
+    });
+    return calc;
+  }, [movimientosFiltrados]);
+
+  const logs = logsData?.data || [];
+  const logsCount = logsData?.count || 0;
+  const logsTotalPages = Math.max(1, Math.ceil(logsCount / LOGS_PAGE_SIZE));
 
   const handleSave = async (movimientoData) => {
     try {
       if (movimientoEditando) {
-        await movimientosService.update(movimientoEditando.id, movimientoData);
+        await actualizarMutate.mutateAsync({
+          id: movimientoEditando.id,
+          data: movimientoData,
+        });
       } else {
-        await movimientosService.create(movimientoData);
+        await crearMutate.mutateAsync(movimientoData);
       }
       setModalOpen(false);
       setMovimientoEditando(null);
-      loadMovimientos();
-      if (logsPage === 1) {
-        loadLogs(1);
-      } else {
-        setLogsPage(1);
-      }
+      setPage(1);
+      setLogsPage(1);
     } catch (error) {
       console.error("Error guardando movimiento:", error);
       alert(
@@ -142,6 +157,7 @@ export default function MovimientosPage() {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFiltros((prev) => ({ ...prev, [name]: value }));
+    setPage(1);
   };
 
   const clearFilters = () => {
@@ -153,6 +169,7 @@ export default function MovimientosPage() {
       ordenarPor: "fecha_desc",
     });
     setMesFiltro(currentMonth);
+    setPage(1);
   };
 
   const handleExport = () => {
@@ -173,34 +190,8 @@ export default function MovimientosPage() {
         { header: "Estado", value: (mov) => getEstadoLabel(mov.estado) },
         { header: "Observaciones", value: (mov) => mov.observaciones || "" },
       ],
-      rows: movimientos,
+      rows: movimientosFiltrados,
     });
-  };
-
-  const loadLogs = async (pageToLoad = 1) => {
-    try {
-      setLogsLoading(true);
-      setLogsError("");
-      const { data, count } = await movimientosService.getLogs({
-        page: pageToLoad,
-        pageSize: LOGS_PAGE_SIZE,
-      });
-      setLogs(data || []);
-      setLogsCount(count || 0);
-    } catch (error) {
-      console.error("Error cargando logs de movimientos:", error);
-      if (error?.code === "42P01") {
-        setLogsError(
-          "La tabla de logs no existe en Supabase. Crea movimientos_financieros_logs para habilitar esta vista.",
-        );
-      } else {
-        setLogsError("No fue posible cargar los logs de movimientos.");
-      }
-      setLogs([]);
-      setLogsCount(0);
-    } finally {
-      setLogsLoading(false);
-    }
   };
 
   const getLogDateTime = (log) => log.created_at || log.fecha_hora || log.fecha;
@@ -219,24 +210,14 @@ export default function MovimientosPage() {
     if (log.observaciones) return log.observaciones;
     return "Sin detalle";
   };
-  const formatDateTime = (value) => {
-    if (!value) return "-";
-    return new Date(value).toLocaleString("es-CO", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-  };
 
-  const logsTotalPages = Math.max(1, Math.ceil(logsCount / LOGS_PAGE_SIZE));
+  const handlePageChange = (newPage) => setPage(newPage);
+  const handleLogsPageChange = (newPage) => setLogsPage(newPage);
+
+  const isMutating = crearMutate.isPending || actualizarMutate.isPending;
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 w-full">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
@@ -253,7 +234,7 @@ export default function MovimientosPage() {
           <Button
             variant="outline"
             onClick={handleExport}
-            disabled={loading || movimientos.length === 0}
+            disabled={isLoading || movimientosFiltrados.length === 0}
             className="shrink-0"
           >
             <Download size={16} className="mr-1 sm:mr-2" />
@@ -273,7 +254,6 @@ export default function MovimientosPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="p-3 sm:p-6">
@@ -322,7 +302,6 @@ export default function MovimientosPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
       <Card className="w-full">
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 items-end">
@@ -343,7 +322,7 @@ export default function MovimientosPage() {
             <input
               type="month"
               value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
+              onChange={(e) => { setMesFiltro(e.target.value); setPage(1); }}
               className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             <select
@@ -366,7 +345,7 @@ export default function MovimientosPage() {
               className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
             >
               <option value="fecha_desc">Más recientes primero</option>
-              <option value="fecha_asc">Más antiguos primero</option>
+              <option value="fecha_asc">M��s antiguos primero</option>
               <option value="valor_total_desc">Mayor valor primero</option>
               <option value="valor_total_asc">Menor valor primero</option>
             </select>
@@ -380,7 +359,6 @@ export default function MovimientosPage() {
         </CardContent>
       </Card>
 
-      {/* Tabla de movimientos */}
       <Card className="w-full overflow-hidden">
         <div className="overflow-x-auto mobile-card-table">
           <table className="min-w-full divide-y divide-slate-200">
@@ -407,7 +385,7 @@ export default function MovimientosPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td
                     colSpan={6}
@@ -416,59 +394,45 @@ export default function MovimientosPage() {
                     Cargando...
                   </td>
                 </tr>
-              ) : movimientos.length === 0 ? (
+              ) : movimientosPaginados.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-4 py-12 text-center text-slate-500"
                   >
-                    No hay movimientos
+                    No hay movimientos para mostrar
                   </td>
                 </tr>
               ) : (
-                movimientos.map((mov) => (
-                  <tr key={mov.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-4 py-3">
-                      <span className="md:hidden text-xs text-slate-500 mr-1">
-                        Fecha:
-                      </span>
-                      <span className="text-sm text-slate-800">
-                        {formatDate(mov.fecha)}
-                      </span>
+                movimientosPaginados.map((movimiento) => (
+                  <tr key={movimiento.id} className="hover:bg-slate-50">
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
+                      {formatDate(movimiento.fecha)}
                     </td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <span className="md:hidden text-xs text-slate-500 mr-1">
-                        Cuenta:
-                      </span>
-                      <span className="text-sm text-slate-600">
-                        {mov.cuentas_financieras?.nombre || "-"}
-                      </span>
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
+                      {getTipoMovimientoLabel(movimiento.tipo_movimiento)}
                     </td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                        {getTipoMovimientoLabel(mov.tipo_movimiento)}
-                      </span>
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
+                      {movimiento.cuentas_financieras?.nombre || "-"}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-right">
-                      <span className="md:hidden text-xs text-slate-500 mr-1">
-                        Valor:
-                      </span>
-                      <span className="text-sm font-medium text-slate-800">
-                        {formatCurrency(mov.valor_total)}
-                      </span>
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                      {formatCurrency(movimiento.valor_total)}
                     </td>
-                    <td className="px-3 sm:px-4 py-3">
+                    <td className="px-3 md:px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoColor(mov.estado)}`}
+                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(
+                          movimiento.estado,
+                        )}`}
                       >
-                        {getEstadoLabel(mov.estado)}
+                        {getEstadoLabel(movimiento.estado)}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-right">
+                    <td className="px-3 md:px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <button
-                          onClick={() => handleEdit(mov)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          onClick={() => handleEdit(movimiento)}
+                          disabled={isMutating}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -479,152 +443,45 @@ export default function MovimientosPage() {
                 ))
               )}
             </tbody>
-            <tfoot className="bg-slate-50 font-semibold hidden sm:table-footer-group">
-              <tr>
-                <td colSpan={3} className="px-4 py-3 text-right">
-                  TOTAL PAGADO:
-                </td>
-                <td className="px-4 py-3 text-right text-slate-800">
-                  {formatCurrency(stats.totalPagado)}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
           </table>
         </div>
-      </Card>
 
-      <Card className="w-full overflow-hidden">
-        <CardContent className="p-3 sm:p-4 md:p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-800">
-                Logs de movimientos
-              </h2>
-              <p className="text-sm text-slate-600">
-                Registro detallado de fecha, hora y usuario por cada accion.
-              </p>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+            <div className="text-sm text-slate-600">
+              Mostrando {((page - 1) * PAGE_SIZE) + 1} -{" "}
+              {Math.min(page * PAGE_SIZE, movimientosFiltrados.length)} de{" "}
+              {movimientosFiltrados.length}
             </div>
-          </div>
-        </CardContent>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 hidden md:table-header-group">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                  Fecha y hora
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                  Usuario
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                  Accion
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                  Movimiento
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                  Detalle
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {logsLoading ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-10 text-center text-slate-500"
-                  >
-                    Cargando logs...
-                  </td>
-                </tr>
-              ) : logsError ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-10 text-center text-amber-700 bg-amber-50"
-                  >
-                    {logsError}
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-10 text-center text-slate-500"
-                  >
-                    No hay logs registrados.
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr
-                    key={
-                      log.id || `${getLogDateTime(log)}-${log.movimiento_id}`
-                    }
-                  >
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
-                      {formatDateTime(getLogDateTime(log))}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
-                      {getLogUser(log)}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        {getLogAction(log)}
-                      </span>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
-                      ID: {log.movimiento_id || log.movimientoId || "-"}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-600">
-                      {getLogDetail(log)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {!logsError && (
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-200">
-            <p className="text-sm text-slate-600">
-              Pagina {logsPage} de {logsTotalPages} · {logsCount} registros
-            </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogsPage((prev) => Math.max(1, prev - 1))}
-                disabled={logsPage === 1 || logsLoading}
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
               >
                 Anterior
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setLogsPage((prev) => Math.min(logsTotalPages, prev + 1))
-                }
-                disabled={logsPage >= logsTotalPages || logsLoading}
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
               >
                 Siguiente
-              </Button>
+              </button>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Modal */}
       <Modal
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false);
           setMovimientoEditando(null);
         }}
-        title={movimientoEditando ? "Editar Movimiento" : "Nuevo Movimiento"}
+        title={
+          movimientoEditando ? "Editar Movimiento" : "Nuevo Movimiento"
+        }
         size="lg"
       >
         <MovimientoForm

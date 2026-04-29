@@ -1,5 +1,6 @@
 // filepath: src/features/dashboard/pages/DashboardHome.jsx
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   TrendingUp,
   TrendingDown,
@@ -114,65 +115,64 @@ const DashboardTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardHome() {
-  const [loading, setLoading] = useState(true);
-  const [cuentas, setCuentas] = useState([]);
-  const [movimientosAnio, setMovimientosAnio] = useState([]);
-  const [movimientosRecientes, setMovimientosRecientes] = useState([]);
-  const [stats, setStats] = useState({
-    ingresos: 0,
-    egresos: 0,
-    iva: 0,
-    facturas: 0,
-    saldoTotal: 0,
+  const mesActual = getDateRange("month");
+  const anioActual = getDateRange("year");
+
+  const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
+    queryKey: ["cuentas", "activas"],
+    queryFn: cuentasService.getActivas,
   });
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  const { data: movimientosData = [], isLoading: movimientosLoading } = useQuery({
+    queryKey: ["movimientos", anioActual],
+    queryFn: () =>
+      movimientosService.getAll({
+        fechaInicio: anioActual.start.toISOString().split("T")[0],
+        fechaFin: anioActual.end.toISOString().split("T")[0],
+        ordenarPor: "fecha_desc",
+      }),
+  });
 
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
+  const { data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0 }, isLoading: statsLoading } = useQuery({
+    queryKey: ["movimientos", "stats", mesActual],
+    queryFn: () =>
+      movimientosService.getEstadisticas(
+        mesActual.start.toISOString().split("T")[0],
+        mesActual.end.toISOString().split("T")[0],
+      ),
+  });
 
-      const mesActual = getDateRange("month");
-      const anioActual = getDateRange("year");
+  const loading = cuentasLoading || movimientosLoading || statsLoading;
 
-      const [cuentasData, movimientosData, statsData] = await Promise.all([
-        cuentasService.getActivas(),
-        movimientosService.getAll({
-          fechaInicio: anioActual.start.toISOString().split("T")[0],
-          fechaFin: anioActual.end.toISOString().split("T")[0],
-          ordenarPor: "fecha_desc",
-        }),
-        movimientosService.getEstadisticas(
-          mesActual.start.toISOString().split("T")[0],
-          mesActual.end.toISOString().split("T")[0],
-        ),
-      ]);
+  const movimientosRecientes = useMemo(
+    () => movimientosData.slice(0, 6),
+    [movimientosData],
+  );
 
-      setCuentas(cuentasData || []);
-      setMovimientosAnio(movimientosData || []);
-      setMovimientosRecientes((movimientosData || []).slice(0, 6));
+  const saldoTotal = useMemo(
+    () => cuentasData.reduce((sum, c) => sum + (c.saldo_actual || 0), 0),
+    [cuentasData],
+  );
 
-      const saldoTotal = (cuentasData || []).reduce(
-        (sum, c) => sum + (c.saldo_actual || 0),
-        0,
-      );
+  const stats = useMemo(
+    () => ({ ...statsData, saldoTotal }),
+    [statsData, saldoTotal],
+  );
 
-      setStats({
-        ...statsData,
-        saldoTotal,
-      });
-    } catch (error) {
-      console.error("Error cargando dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const utilidad = useMemo(
+    () => stats.ingresos - stats.egresos,
+    [stats.ingresos, stats.egresos],
+  );
 
-  const utilidad = stats.ingresos - stats.egresos;
-  const monthlyChartData = buildMonthlyChart(movimientosAnio);
-  const accountsChartData = buildAccountsChart(cuentas);
+  const monthlyChartData = useMemo(
+    () => buildMonthlyChart(movimientosData),
+    [movimientosData],
+  );
+
+  const accountsChartData = useMemo(
+    () => buildAccountsChart(cuentasData),
+    [cuentasData],
+  );
 
   const handleExport = () => {
     const rows = [
@@ -206,7 +206,7 @@ export default function DashboardHome() {
         detalle: "",
         valor: stats.saldoTotal,
       },
-      ...cuentas.map((cuenta) => ({
+      ...cuentasData.map((cuenta) => ({
         seccion: "Saldo por cuenta",
         concepto: cuenta.nombre,
         detalle: cuenta.tipo_cuenta?.replace("_", " ") || "",
@@ -350,7 +350,7 @@ export default function DashboardHome() {
                 Cuentas activas
               </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
-                {cuentas.length}
+                {cuentasData.length}
               </p>
             </div>
           </CardContent>
@@ -469,12 +469,12 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
-              {cuentas.length === 0 ? (
+              {cuentasData.length === 0 ? (
                 <p className="text-slate-500 text-center py-4 text-sm">
                   No hay cuentas registradas
                 </p>
               ) : (
-                cuentas.map((cuenta) => (
+                cuentasData.map((cuenta) => (
                   <div
                     key={cuenta.id}
                     className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-lg"
