@@ -26,6 +26,8 @@ import {
   getEstadoLabel,
 } from "../../../lib/utils";
 import { exportToExcel } from "../../../lib/exportExcel";
+import { useAuth } from "../../auth/AuthProvider";
+import { canPerform, PERMISSIONS } from "../../auth/permissions";
 
 const PAGE_SIZE = 20;
 
@@ -57,6 +59,7 @@ const emptyEstadoForm = {
 };
 
 export default function FacturasPage() {
+  const { access } = useAuth();
   const range = getDateRange("month");
   const currentMonth = formatDateInput(range.start).slice(0, 7);
   const [facturaModalOpen, setFacturaModalOpen] = useState(false);
@@ -158,6 +161,9 @@ export default function FacturasPage() {
   };
 
   const openFacturaModal = (factura = null) => {
+    if (factura && !canPerform(access, PERMISSIONS.FACTURAS_EDIT)) return;
+    if (!factura && !canPerform(access, PERMISSIONS.FACTURAS_CREATE)) return;
+
     setErrors({});
     if (factura) {
       setFacturaForm({
@@ -184,9 +190,16 @@ export default function FacturasPage() {
 
   const handleFacturaSubmit = async (e) => {
     e.preventDefault();
+    if (selectedFactura && !canPerform(access, PERMISSIONS.FACTURAS_EDIT))
+      return;
+    if (!selectedFactura && !canPerform(access, PERMISSIONS.FACTURAS_CREATE))
+      return;
+
     const nextErrors = {};
-    if (!facturaForm.cliente_nit) nextErrors.cliente_nit = "El NIT es obligatorio";
-    if (!facturaForm.numero_factura) nextErrors.numero_factura = "El número es obligatorio";
+    if (!facturaForm.cliente_nit)
+      nextErrors.cliente_nit = "El NIT es obligatorio";
+    if (!facturaForm.numero_factura)
+      nextErrors.numero_factura = "El número es obligatorio";
     if (!facturaForm.valor_total || Number(facturaForm.valor_total) <= 0) {
       nextErrors.valor_total = "El valor debe ser mayor a 0";
     }
@@ -201,7 +214,10 @@ export default function FacturasPage() {
         valor_total: Number(facturaForm.valor_total),
       };
       if (selectedFactura) {
-        await actualizarMutate.mutateAsync({ id: selectedFactura.id, data: payload });
+        await actualizarMutate.mutateAsync({
+          id: selectedFactura.id,
+          data: payload,
+        });
       } else {
         await crearMutate.mutateAsync(payload);
       }
@@ -213,6 +229,8 @@ export default function FacturasPage() {
   };
 
   const openEstadoModal = (factura) => {
+    if (!canPerform(access, PERMISSIONS.FACTURAS_CHANGE_STATE)) return;
+
     setSelectedFactura(factura);
     setEstadoForm({
       estado: factura.estado || "pendiente",
@@ -232,6 +250,7 @@ export default function FacturasPage() {
   const handleEstadoSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFactura) return;
+    if (!canPerform(access, PERMISSIONS.FACTURAS_CHANGE_STATE)) return;
 
     try {
       const payload = {
@@ -239,7 +258,10 @@ export default function FacturasPage() {
         ...estadoForm,
         valor_total: selectedFactura.valor_total,
       };
-      await actualizarMutate.mutateAsync({ id: selectedFactura.id, data: payload });
+      await actualizarMutate.mutateAsync({
+        id: selectedFactura.id,
+        data: payload,
+      });
       closeEstadoModal();
     } catch (error) {
       console.error("Error actualizando estado:", error);
@@ -270,7 +292,10 @@ export default function FacturasPage() {
       fileName: "facturas",
       sheetName: "Facturas",
       columns: [
-        { header: "Número", value: (f) => `${f.prefijo || ""}-${f.numero_factura || ""}` },
+        {
+          header: "Número",
+          value: (f) => `${f.prefijo || ""}-${f.numero_factura || ""}`,
+        },
         { header: "Fecha", value: (f) => formatDate(f.fecha_pago) },
         { header: "Cliente", value: (f) => f.cliente_nit },
         { header: "Nombre", value: (f) => f.cliente_nombre },
@@ -284,6 +309,12 @@ export default function FacturasPage() {
   const handlePageChange = (newPage) => setPage(newPage);
 
   const isMutating = crearMutate.isPending || actualizarMutate.isPending;
+  const canCreateFactura = canPerform(access, PERMISSIONS.FACTURAS_CREATE);
+  const canEditFactura = canPerform(access, PERMISSIONS.FACTURAS_EDIT);
+  const canChangeFacturaState = canPerform(
+    access,
+    PERMISSIONS.FACTURAS_CHANGE_STATE,
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full">
@@ -297,14 +328,21 @@ export default function FacturasPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <Button variant="outline" onClick={handleExport} disabled={isLoading || facturasEnriquecidas.length === 0} className="shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isLoading || facturasEnriquecidas.length === 0}
+            className="shrink-0"
+          >
             <Download size={16} className="mr-1 sm:mr-2" />
             Excel
           </Button>
-          <Button onClick={() => openFacturaModal()} className="shrink-0">
-            <Plus size={16} className="mr-1 sm:mr-2" />
-            Nueva Factura
-          </Button>
+          {canCreateFactura && (
+            <Button onClick={() => openFacturaModal()} className="shrink-0">
+              <Plus size={16} className="mr-1 sm:mr-2" />
+              Nueva Factura
+            </Button>
+          )}
         </div>
       </div>
 
@@ -312,7 +350,10 @@ export default function FacturasPage() {
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             <div className="sm:col-span-2 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
               <input
                 type="text"
                 name="busqueda"
@@ -325,7 +366,10 @@ export default function FacturasPage() {
             <input
               type="month"
               value={mesResumen}
-              onChange={(e) => { setMesResumen(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setMesResumen(e.target.value);
+                setPage(1);
+              }}
               className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             <select
@@ -336,10 +380,15 @@ export default function FacturasPage() {
             >
               <option value="">Todos los estados</option>
               {ESTADOS_FILTRO.map((est) => (
-                <option key={est.value} value={est.value}>{est.label}</option>
+                <option key={est.value} value={est.value}>
+                  {est.label}
+                </option>
               ))}
             </select>
-            <button onClick={clearFilters} className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-100">
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-100"
+            >
               Limpiar
             </button>
           </div>
@@ -351,24 +400,42 @@ export default function FacturasPage() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50 hidden sm:table-header-group">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Número</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Fecha</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Cliente</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Valor</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Estado</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Número
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Fecha
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Cliente
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                  Valor
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                  Estado
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {isLoading || clientesLoading || cuentasLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-12 text-center text-slate-500"
+                  >
                     Cargando...
                   </td>
                 </tr>
               ) : facturasPaginadas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-12 text-center text-slate-500"
+                  >
                     No hay facturas para mostrar
                   </td>
                 </tr>
@@ -383,24 +450,40 @@ export default function FacturasPage() {
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
                       <div>{factura.cliente_nit}</div>
-                      <div className="text-xs text-slate-500">{factura.cliente_nombre}</div>
+                      <div className="text-xs text-slate-500">
+                        {factura.cliente_nombre}
+                      </div>
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
                       {formatCurrency(factura.valor_total)}
                     </td>
                     <td className="px-3 sm:px-4 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(factura.estado)}`}>
+                      <span
+                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(factura.estado)}`}
+                      >
                         {getEstadoLabel(factura.estado)}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => openEstadoModal(factura)} disabled={isMutating} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50">
-                          <CheckCircle2 size={16} />
-                        </button>
-                        <button onClick={() => openFacturaModal(factura)} disabled={isMutating} className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg disabled:opacity-50">
-                          <Receipt size={16} />
-                        </button>
+                        {canChangeFacturaState && (
+                          <button
+                            onClick={() => openEstadoModal(factura)}
+                            disabled={isMutating}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                          >
+                            <CheckCircle2 size={16} />
+                          </button>
+                        )}
+                        {canEditFactura && (
+                          <button
+                            onClick={() => openFacturaModal(factura)}
+                            disabled={isMutating}
+                            className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg disabled:opacity-50"
+                          >
+                            <Receipt size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -413,13 +496,23 @@ export default function FacturasPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
             <div className="text-sm text-slate-600">
-              Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, facturasEnriquecidas.length)} de {facturasEnriquecidas.length}
+              Mostrando {(page - 1) * PAGE_SIZE + 1} -{" "}
+              {Math.min(page * PAGE_SIZE, facturasEnriquecidas.length)} de{" "}
+              {facturasEnriquecidas.length}
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handlePageChange(page - 1)} disabled={page <= 1} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
                 Anterior
               </button>
-              <button onClick={() => handlePageChange(page + 1)} disabled={page >= totalPages} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all">
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+              >
                 Siguiente
               </button>
             </div>
@@ -427,38 +520,152 @@ export default function FacturasPage() {
         )}
       </Card>
 
-      <Modal isOpen={facturaModalOpen} onClose={closeFacturaModal} title={selectedFactura ? "Editar Factura" : "Nueva Factura"} size="lg">
+      <Modal
+        isOpen={facturaModalOpen}
+        onClose={closeFacturaModal}
+        title={selectedFactura ? "Editar Factura" : "Nueva Factura"}
+        size="lg"
+      >
         <form onSubmit={handleFacturaSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Tipo" value={facturaForm.prefijo} onChange={(e) => setFacturaForm(prev => ({ ...prev, prefijo: e.target.value }))}>
-              {PREFIJOS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            <Select
+              label="Tipo"
+              value={facturaForm.prefijo}
+              onChange={(e) =>
+                setFacturaForm((prev) => ({ ...prev, prefijo: e.target.value }))
+              }
+            >
+              {PREFIJOS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
             </Select>
-            <Input label="Número" value={facturaForm.numero_factura} onChange={(e) => setFacturaForm(prev => ({ ...prev, numero_factura: e.target.value }))} error={errors.numero_factura} required />
+            <Input
+              label="Número"
+              value={facturaForm.numero_factura}
+              onChange={(e) =>
+                setFacturaForm((prev) => ({
+                  ...prev,
+                  numero_factura: e.target.value,
+                }))
+              }
+              error={errors.numero_factura}
+              required
+            />
           </div>
-          <Input label="NIT Cliente" value={facturaForm.cliente_nit} onChange={(e) => setFacturaForm(prev => ({ ...prev, cliente_nit: e.target.value }))} error={errors.cliente_nit} required />
-          <Input label="Fecha" type="date" value={facturaForm.fecha_pago} onChange={(e) => setFacturaForm(prev => ({ ...prev, fecha_pago: e.target.value }))} />
-          <Input label="Valor Total" type="number" value={facturaForm.valor_total} onChange={(e) => setFacturaForm(prev => ({ ...prev, valor_total: e.target.value }))} error={errors.valor_total} required />
-          <Textarea label="Observaciones" value={facturaForm.observaciones} onChange={(e) => setFacturaForm(prev => ({ ...prev, observaciones: e.target.value }))} rows={3} />
+          <Input
+            label="NIT Cliente"
+            value={facturaForm.cliente_nit}
+            onChange={(e) =>
+              setFacturaForm((prev) => ({
+                ...prev,
+                cliente_nit: e.target.value,
+              }))
+            }
+            error={errors.cliente_nit}
+            required
+          />
+          <Input
+            label="Fecha"
+            type="date"
+            value={facturaForm.fecha_pago}
+            onChange={(e) =>
+              setFacturaForm((prev) => ({
+                ...prev,
+                fecha_pago: e.target.value,
+              }))
+            }
+          />
+          <Input
+            label="Valor Total"
+            type="number"
+            value={facturaForm.valor_total}
+            onChange={(e) =>
+              setFacturaForm((prev) => ({
+                ...prev,
+                valor_total: e.target.value,
+              }))
+            }
+            error={errors.valor_total}
+            required
+          />
+          <Textarea
+            label="Observaciones"
+            value={facturaForm.observaciones}
+            onChange={(e) =>
+              setFacturaForm((prev) => ({
+                ...prev,
+                observaciones: e.target.value,
+              }))
+            }
+            rows={3}
+          />
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={closeFacturaModal}>Cancelar</Button>
-            <Button type="submit" disabled={isMutating}>Guardar</Button>
+            <Button type="button" variant="outline" onClick={closeFacturaModal}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isMutating}>
+              Guardar
+            </Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={estadoModalOpen} onClose={closeEstadoModal} title="Cambiar Estado" size="md">
+      <Modal
+        isOpen={estadoModalOpen}
+        onClose={closeEstadoModal}
+        title="Cambiar Estado"
+        size="md"
+      >
         <form onSubmit={handleEstadoSubmit} className="space-y-4">
-          <Select label="Estado" value={estadoForm.estado} onChange={(e) => setEstadoForm(prev => ({ ...prev, estado: e.target.value }))}>
-            {ESTADOS_FILTRO.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+          <Select
+            label="Estado"
+            value={estadoForm.estado}
+            onChange={(e) =>
+              setEstadoForm((prev) => ({ ...prev, estado: e.target.value }))
+            }
+          >
+            {ESTADOS_FILTRO.map((e) => (
+              <option key={e.value} value={e.value}>
+                {e.label}
+              </option>
+            ))}
           </Select>
-          <Input label="Fecha de Pago" type="date" value={estadoForm.fecha_pago} onChange={(e) => setEstadoForm(prev => ({ ...prev, fecha_pago: e.target.value }))} />
+          <Input
+            label="Fecha de Pago"
+            type="date"
+            value={estadoForm.fecha_pago}
+            onChange={(e) =>
+              setEstadoForm((prev) => ({ ...prev, fecha_pago: e.target.value }))
+            }
+          />
           <div className="text-sm text-slate-600">
-            Valor: <strong>{selectedFactura ? formatCurrency(selectedFactura.valor_total) : "-"}</strong>
+            Valor:{" "}
+            <strong>
+              {selectedFactura
+                ? formatCurrency(selectedFactura.valor_total)
+                : "-"}
+            </strong>
           </div>
-          <Textarea label="Observaciones" value={estadoForm.observaciones} onChange={(e) => setEstadoForm(prev => ({ ...prev, observaciones: e.target.value }))} rows={2} />
+          <Textarea
+            label="Observaciones"
+            value={estadoForm.observaciones}
+            onChange={(e) =>
+              setEstadoForm((prev) => ({
+                ...prev,
+                observaciones: e.target.value,
+              }))
+            }
+            rows={2}
+          />
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={closeEstadoModal}>Cancelar</Button>
-            <Button type="submit" disabled={isMutating}>Actualizar</Button>
+            <Button type="button" variant="outline" onClick={closeEstadoModal}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isMutating}>
+              Actualizar
+            </Button>
           </div>
         </form>
       </Modal>

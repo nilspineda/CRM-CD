@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Wallet,
@@ -7,57 +8,95 @@ import {
   Receipt,
   FileText,
   BarChart3,
+  ShieldCheck,
   Settings,
   Menu,
   User,
   X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import Button from "../ui/Button";
+import { useAuth } from "../../features/auth/AuthProvider";
+import { canAccessModule } from "../../features/auth/permissions";
 
 const navItems = [
   {
+    moduleKey: "dashboard",
     path: "/dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
     description: "Resumen general",
   },
   {
+    moduleKey: "cuentas",
     path: "/cuentas",
     icon: Wallet,
     label: "Cuentas",
     description: "Gestion de cuentas",
   },
   {
+    moduleKey: "clientes",
     path: "/clientes",
     icon: Users,
     label: "Clientes",
     description: "NIT y contactos",
   },
   {
+    moduleKey: "movimientos",
     path: "/movimientos",
     icon: ArrowLeftRight,
     label: "Movimientos",
     description: "Ingresos y egresos",
   },
   {
+    moduleKey: "facturas",
     path: "/facturas",
     icon: Receipt,
     label: "Facturas",
     description: "Facturacion",
   },
-  { path: "/iva", icon: FileText, label: "IVA", description: "Control de IVA" },
   {
+    moduleKey: "iva",
+    path: "/iva",
+    icon: FileText,
+    label: "IVA",
+    description: "Control de IVA",
+  },
+  {
+    moduleKey: "reportes",
     path: "/reportes",
     icon: BarChart3,
     label: "Reportes",
     description: "Informes",
+  },
+  {
+    moduleKey: "usuarios",
+    path: "/usuarios",
+    icon: ShieldCheck,
+    label: "Usuarios",
+    description: "Roles y permisos",
   },
 ];
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { access, user, signOut } = useAuth();
   const currentPage = navItems.find((item) => item.path === location.pathname);
+  const visibleNavItems = navItems.filter((item) =>
+    canAccessModule(access, item.moduleKey),
+  );
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-slate-50">
@@ -97,7 +136,7 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="p-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -136,17 +175,19 @@ export default function DashboardLayout() {
               <User size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Administrador</p>
+              <p className="text-sm font-medium truncate">{access.roleLabel}</p>
               <p className="text-xs text-slate-400 truncate">
-                admin@concepto.digital
+                {user?.email || "Usuario autenticado"}
               </p>
             </div>
-            <button
-              className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors shrink-0"
-              aria-label="Configuracion"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="p-2 text-slate-300 hover:text-white hover:bg-slate-700"
             >
-              <Settings size={18} />
-            </button>
+              <LogOut size={16} />
+            </Button>
           </div>
         </div>
       </aside>
