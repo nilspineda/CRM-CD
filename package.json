@@ -13,7 +13,6 @@
     "@supabase/supabase-js": "^2.104.1",
     "@tailwindcss/vite": "^4.2.4",
     "@tanstack/react-query": "^5.100.6",
-    "continue": "^0.1.0",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

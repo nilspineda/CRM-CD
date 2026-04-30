@@ -240,7 +240,7 @@ export default function DashboardHome() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500">Cargando dashboard...</div>
+        <div className="text-slate-500 dark:text-slate-400">Cargando dashboard...</div>
       </div>
     );
   }
@@ -250,10 +250,10 @@ export default function DashboardHome() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
             Dashboard
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             Resumen financiero del mes en curso
           </p>
         </div>
@@ -267,17 +267,17 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-green-100 rounded-lg shrink-0">
-              <TrendingUp className="text-green-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
+              <TrendingUp className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 Ingresos totales
               </p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.ingresos)}
               </p>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
                 Movimientos pagados del mes actual
               </p>
             </div>
@@ -286,17 +286,17 @@ export default function DashboardHome() {
 
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-red-100 rounded-lg shrink-0">
-              <TrendingDown className="text-red-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/30 rounded-lg shrink-0">
+              <TrendingDown className="text-red-600 dark:text-red-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 Gastos totales
               </p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.egresos)}
               </p>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
                 Movimientos pagados del mes actual
               </p>
             </div>
@@ -306,24 +306,24 @@ export default function DashboardHome() {
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
             <div
-              className={`p-2 sm:p-3 rounded-lg shrink-0 ${utilidad >= 0 ? "bg-blue-100" : "bg-orange-100"}`}
+              className={`p-2 sm:p-3 rounded-lg shrink-0 ${utilidad >= 0 ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}
             >
               {utilidad >= 0 ? (
-                <TrendingUp className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+                <TrendingUp className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
               ) : (
-                <TrendingDown className="text-orange-600 w-5 h-5 sm:w-6 sm:h-6" />
+                <TrendingDown className="text-red-600 dark:text-red-400 w-5 h-5 sm:w-6 sm:h-6" />
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 Utilidad del mes
               </p>
               <p
-                className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${utilidad >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${utilidad >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
               >
                 {formatCurrency(utilidad)}
               </p>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
                 Ingresos menos gastos del mes actual
               </p>
             </div>
@@ -332,12 +332,12 @@ export default function DashboardHome() {
 
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-purple-100 rounded-lg shrink-0">
-              <DollarSign className="text-purple-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
+              <DollarSign className="text-amber-600 dark:text-amber-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">IVA por pagar</p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">IVA por pagar</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.iva)}
               </p>
             </div>
@@ -346,14 +346,14 @@ export default function DashboardHome() {
 
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-slate-100 rounded-lg shrink-0">
-              <Wallet className="text-slate-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">
+              <Wallet className="text-slate-600 dark:text-slate-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 Cuentas activas
               </p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {cuentasData.length}
               </p>
             </div>
@@ -362,12 +362,12 @@ export default function DashboardHome() {
 
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-amber-100 rounded-lg shrink-0">
-              <FileText className="text-amber-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
+              <FileText className="text-amber-600 dark:text-amber-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600">ICA (1.25%)</p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">ICA (1.25%)</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.valor125)}
               </p>
             </div>
@@ -385,7 +385,7 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent className="h-80 sm:h-96">
             {monthlyChartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
                 No hay datos suficientes para graficar el año en curso.
               </div>
             ) : (
@@ -401,13 +401,13 @@ export default function DashboardHome() {
                   <Legend />
                   <Bar
                     dataKey="Ingresos"
-                    fill="#16a34a"
+                    fill="#f59e0b"
                     radius={[6, 6, 0, 0]}
                   />
                   <Bar dataKey="Egresos" fill="#dc2626" radius={[6, 6, 0, 0]} />
                   <Bar
                     dataKey="Utilidad"
-                    fill="#2563eb"
+                    fill="#d97706"
                     radius={[6, 6, 0, 0]}
                   />
                 </BarChart>
@@ -424,7 +424,7 @@ export default function DashboardHome() {
               </CardTitle>
               <Link
                 to="/cuentas"
-                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1"
               >
                 Ver cuentas <ArrowRight size={14} />
               </Link>
@@ -432,7 +432,7 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent className="h-80 sm:h-96">
             {accountsChartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
                 No hay cuentas activas para mostrar.
               </div>
             ) : (
@@ -458,7 +458,7 @@ export default function DashboardHome() {
                   <Bar
                     dataKey="saldo"
                     name="Saldo"
-                    fill="#2563eb"
+                    fill="#f59e0b"
                     radius={[0, 6, 6, 0]}
                   />
                 </BarChart>
@@ -479,7 +479,7 @@ export default function DashboardHome() {
               </CardTitle>
               <Link
                 to="/cuentas"
-                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1"
               >
                 Ver todas <ArrowRight size={14} />
               </Link>
@@ -488,36 +488,36 @@ export default function DashboardHome() {
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
               {cuentasData.length === 0 ? (
-                <p className="text-slate-500 text-center py-4 text-sm">
+                <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">
                   No hay cuentas registradas
                 </p>
               ) : (
                 cuentasData.map((cuenta) => (
                   <div
                     key={cuenta.id}
-                    className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-lg"
+                    className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-800 text-sm sm:text-base truncate">
+                      <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">
                         {cuenta.nombre}
                       </p>
-                      <p className="text-xs sm:text-sm text-slate-500 capitalize">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 capitalize">
                         {cuenta.tipo_cuenta?.replace("_", " ")}
                       </p>
                     </div>
-                    <p className="font-semibold text-slate-800 text-sm sm:text-base shrink-0 ml-2">
+                    <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm sm:text-base shrink-0 ml-2">
                       {formatCurrency(cuenta.saldo_actual)}
                     </p>
                   </div>
                 ))
               )}
             </div>
-            <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-slate-800 text-sm sm:text-base">
+                <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm sm:text-base">
                   Total disponible
                 </p>
-                <p className="text-lg sm:text-xl font-bold text-slate-800">
+                <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
                   {formatCurrency(stats.saldoTotal)}
                 </p>
               </div>
@@ -534,7 +534,7 @@ export default function DashboardHome() {
               </CardTitle>
               <Link
                 to="/movimientos"
-                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1"
               >
                 Ver todos <ArrowRight size={14} />
               </Link>
@@ -543,34 +543,34 @@ export default function DashboardHome() {
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
               {movimientosRecientes.length === 0 ? (
-                <p className="text-slate-500 text-center py-4 text-sm">
+                <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">
                   No hay movimientos registrados
                 </p>
               ) : (
                 movimientosRecientes.map((mov) => (
                   <div
                     key={mov.id}
-                    className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-lg"
+                    className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
                   >
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                       <div
                         className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${
                           isIngreso(mov.tipo_movimiento)
-                            ? "bg-green-100"
-                            : "bg-red-100"
+                            ? "bg-green-100 dark:bg-green-900/30"
+                            : "bg-red-100 dark:bg-red-900/30"
                         }`}
                       >
                         {isIngreso(mov.tipo_movimiento) ? (
-                          <TrendingUp size={14} className="text-green-600" />
+                          <TrendingUp size={14} className="text-green-600 dark:text-green-400" />
                         ) : (
-                          <TrendingDown size={14} className="text-red-600" />
+                          <TrendingDown size={14} className="text-red-600 dark:text-red-400" />
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-800 text-sm truncate">
+                        <p className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">
                           {mov.descripcion}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {formatDate(mov.fecha)}
                         </p>
                       </div>
@@ -578,8 +578,8 @@ export default function DashboardHome() {
                     <p
                       className={`font-semibold text-sm sm:text-base shrink-0 ml-2 ${
                         isIngreso(mov.tipo_movimiento)
-                          ? "text-green-600"
-                          : "text-red-600"
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
                       }`}
                     >
                       {formatCurrency(mov.valor_total)}
@@ -595,43 +595,43 @@ export default function DashboardHome() {
       {/* Quick actions */}
       <Card className="w-full">
         <CardContent className="p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-semibold text-slate-800 mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3 sm:mb-4">
             Acciones rápidas
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <Link
               to="/movimientos"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <FileText size={20} className="text-blue-600" />
-              <span className="text-xs sm:text-sm font-medium text-slate-700 text-center">
+              <FileText size={20} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Nuevo Movimiento
               </span>
             </Link>
             <Link
               to="/cuentas"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <Wallet size={20} className="text-green-600" />
-              <span className="text-xs sm:text-sm font-medium text-slate-700 text-center">
+              <Wallet size={20} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Ver Cuentas
               </span>
             </Link>
             <Link
               to="/movimientos"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <Clock size={20} className="text-orange-600" />
-              <span className="text-xs sm:text-sm font-medium text-slate-700 text-center">
+              <Clock size={20} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Pendientes
               </span>
             </Link>
             <Link
               to="/movimientos"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <DollarSign size={20} className="text-purple-600" />
-              <span className="text-xs sm:text-sm font-medium text-slate-700 text-center">
+              <DollarSign size={20} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Reporte IVA
               </span>
             </Link>

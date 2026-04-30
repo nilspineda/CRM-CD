@@ -178,10 +178,10 @@ export default function ClientesPage() {
     <div className="space-y-4 sm:space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
             Clientes
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             NIT, contactos y datos base para facturación
           </p>
         </div>
@@ -211,7 +211,7 @@ export default function ClientesPage() {
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(1); }}
               placeholder="Buscar por NIT, nombre, teléfono o correo..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
         </CardContent>
@@ -219,67 +219,67 @@ export default function ClientesPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 table-fixed">
-            <thead className="bg-slate-50 hidden sm:table-header-group">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
+            <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   NIT
                 </th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Nombre
                 </th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Responsable
                 </th>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Teléfono
                 </th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Correo
                 </th>
-                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Estado
                 </th>
-                <th className="w-[16%] px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                <th className="w-[16%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-12 text-center text-slate-500"
-                  >
-                    Cargando clientes...
-                  </td>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                    >
+                      Cargando clientes...
+                    </td>
                 </tr>
               ) : clientesPaginados.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-12 text-center text-slate-500"
-                  >
-                    No hay clientes para mostrar
-                  </td>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                    >
+                      No hay clientes para mostrar
+                    </td>
                 </tr>
               ) : (
                 clientesPaginados.map((cliente) => (
-                  <tr key={cliente.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center font-medium">
+                  <tr key={cliente.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center font-medium">
                       {cliente.nit}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 font-medium text-center">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center">
                       {cliente.nombre}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                       {cliente.responsable || '-'}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                       {cliente.telefono || '-'}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-center break-all">
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all">
                       {cliente.correo || '-'}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-center">
@@ -287,8 +287,8 @@ export default function ClientesPage() {
                         <Badge
                           className={
                             cliente.estado === false
-                              ? 'bg-slate-100 text-slate-700'
-                              : 'bg-green-100 text-green-700'
+                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           }
                         >
                           {cliente.estado === false ? 'Inactivo' : 'Activo'}
@@ -312,8 +312,8 @@ export default function ClientesPage() {
                           disabled={isMutating}
                           className={
                             cliente.estado === false
-                              ? 'border-green-300 text-green-700 hover:bg-green-50'
-                              : 'border-red-300 text-red-700 hover:bg-red-50'
+                              ? 'border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20'
+                              : 'border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20'
                           }
                         >
                           {cliente.estado === false
@@ -330,22 +330,22 @@ export default function ClientesPage() {
         </div>
         
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <div className="text-sm text-slate-600">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
               Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, clientesFiltrados.length)} de {clientesFiltrados.length}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all"
               >
                 Anterior
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all"
               >
                 Siguiente
               </button>
@@ -443,9 +443,9 @@ export default function ClientesPage() {
                       estado: event.target.checked,
                     }))
                   }
-                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                  className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-amber-600 focus:ring-2 focus:ring-amber-500/20"
                 />
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {form.estado ? 'Cliente activo' : 'Cliente inactivo'}
                 </span>
               </label>
@@ -480,8 +480,8 @@ export default function ClientesPage() {
 
 function ClientStatCard({ label, value, tone }) {
   const tones = {
-    green: 'bg-green-100 text-green-700',
-    slate: 'bg-slate-100 text-slate-700',
+    green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    slate: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
   };
 
   return (
@@ -491,8 +491,8 @@ function ClientStatCard({ label, value, tone }) {
           <Users size={20} />
         </div>
         <div>
-          <p className="text-xs sm:text-sm text-slate-600">{label}</p>
-          <p className="text-base sm:text-xl font-bold text-slate-800">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{label}</p>
+          <p className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100">
             {value}
           </p>
         </div>

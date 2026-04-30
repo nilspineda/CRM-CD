@@ -140,8 +140,8 @@ export default function CuentasPage() {
     <div className="space-y-4 sm:space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 w-full">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">Cuentas Financieras</h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">Administra tus cuentas bancarias, cajas y billeteras</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">Cuentas Financieras</h1>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">Administra tus cuentas bancarias, cajas y billeteras</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <Button variant="outline" onClick={handleExport} disabled={isLoading || cuentasFiltradas.length === 0} className="shrink-0">
@@ -159,34 +159,34 @@ export default function CuentasPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg shrink-0">
-              <Wallet className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+              <Wallet className="text-blue-600 dark:text-blue-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-slate-600">Total Cuentas</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-800">{cuentasActivas.length}</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Total Cuentas</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">{cuentasActivas.length}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-green-100 rounded-lg shrink-0">
-              <TrendingUp className="text-green-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
+              <TrendingUp className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-slate-600">Saldo Total</p>
-              <p className="text-lg sm:text-2xl font-bold text-slate-800 truncate">{formatCurrency(saldoTotal)}</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Saldo Total</p>
+              <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">{formatCurrency(saldoTotal)}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-slate-100 rounded-lg shrink-0">
-              <Wallet className="text-slate-600 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 sm:p-3 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">
+              <Wallet className="text-slate-600 dark:text-slate-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-slate-600">Inactivas</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-800">{cuentas.length - cuentasActivas.length}</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Inactivas</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">{cuentas.length - cuentasActivas.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -196,19 +196,19 @@ export default function CuentasPage() {
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
               <input
                 type="text"
                 placeholder="Buscar cuentas..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
             <select
               value={filtroEstado}
               onChange={(e) => { setFiltroEstado(e.target.value); setPage(1); }}
-              className="px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white min-w-[140px]"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white dark:bg-slate-800 min-w-[140px]"
             >
               <option value="todos">Todos</option>
               <option value="activa">Activas</option>
@@ -220,39 +220,39 @@ export default function CuentasPage() {
 
       <Card className="w-full overflow-hidden">
         <div className="overflow-x-auto mobile-card-table">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 hidden sm:table-header-group">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Nombre</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Tipo</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Saldo Inicial</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Saldo Actual</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Estado</th>
-                <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Acciones</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Nombre</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Tipo</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Inicial</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Actual</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Estado</th>
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     Cargando...
                   </td>
                 </tr>
               ) : cuentasPaginadas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     No hay cuentas que mostrar
                   </td>
                 </tr>
               ) : (
                 cuentasPaginadas.map((cuenta) => (
-                  <tr key={cuenta.id} className="hover:bg-slate-50">
+                  <tr key={cuenta.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="sm:hidden text-xs text-slate-500 mb-1">Nombre</div>
+                      <div className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mb-1">Nombre</div>
                       <div>
-                        <p className="font-medium text-slate-800 text-sm sm:text-base">{cuenta.nombre}</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base">{cuenta.nombre}</p>
                         {cuenta.descripcion && (
-                          <p className="text-xs sm:text-sm text-slate-500 hidden sm:block">{cuenta.descripcion}</p>
+                          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">{cuenta.descripcion}</p>
                         )}
                       </div>
                     </td>
@@ -263,12 +263,12 @@ export default function CuentasPage() {
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <span className="sm:hidden text-xs text-slate-500 mr-1">Inicial:</span>
-                      <span className="text-sm sm:text-base text-slate-800">{formatCurrency(cuenta.saldo_inicial)}</span>
+                      <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Inicial:</span>
+                      <span className="text-sm sm:text-base text-slate-800 dark:text-slate-100">{formatCurrency(cuenta.saldo_inicial)}</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <span className="sm:hidden text-xs text-slate-500 mr-1">Actual:</span>
-                      <span className="text-sm sm:text-base font-semibold text-slate-800">{formatCurrency(cuenta.saldo_actual)}</span>
+                      <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Actual:</span>
+                      <span className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(cuenta.saldo_actual)}</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <Badge variant={cuenta.estado ? 'success' : 'default'}>
@@ -280,7 +280,7 @@ export default function CuentasPage() {
                         <button
                           onClick={() => handleEdit(cuenta)}
                           disabled={isMutating}
-                          className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                          className="p-1.5 sm:p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg disabled:opacity-50"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -289,7 +289,7 @@ export default function CuentasPage() {
                           <button
                             onClick={() => handleDelete(cuenta)}
                             disabled={isMutating}
-                            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                            className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50"
                             title="Inactivar"
                           >
                             <Trash2 size={16} />
@@ -298,7 +298,7 @@ export default function CuentasPage() {
                           <button
                             onClick={() => handleActivate(cuenta)}
                             disabled={isMutating}
-                            className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50"
+                            className="p-1.5 sm:p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg disabled:opacity-50"
                             title="Activar"
                           >
                             <Plus size={16} />
@@ -314,22 +314,22 @@ export default function CuentasPage() {
         </div>
         
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <div className="text-sm text-slate-600">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
               Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, cuentasFiltradas.length)} de {cuentasFiltradas.length}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
               >
                 Anterior
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
               >
                 Siguiente
               </button>
@@ -356,12 +356,12 @@ export default function CuentasPage() {
 
 function getTipoColor(tipo) {
   const colors = {
-    caja: 'bg-purple-100 text-purple-700',
-    banco: 'bg-blue-100 text-blue-700',
-    billetera_digital: 'bg-green-100 text-green-700',
-    ahorro: 'bg-yellow-100 text-yellow-700',
-    efectivo: 'bg-orange-100 text-orange-700',
-    otra: 'bg-slate-100 text-slate-700',
+    caja: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+    banco: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+    billetera_digital: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+    ahorro: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+    efectivo: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+    otra: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
   };
   return colors[tipo] || colors.otra;
 }

@@ -117,7 +117,7 @@ export const TIPO_MOVIMIENTO_LABELS = {
   pago_iva: "PAGO DE IVA",
   pago_ica: "PAGO DE ICA",
   pago_factura_electronica: "Pago de Factura Electronica",
-  pago_facturas_remision: "Pago Factuiras Remision",
+  pago_facturas_remision: "Pago Facturas Remision",
   servicios_agua_1p: "SERVICIOS PUBLICOS 1 PISO - AGUA",
   servicios_luz_1p: "SERVICIOS PUBLICOS 1 PISO - LUZ",
   servicios_gas_1p: "SERVICIOS PUBLICOS 1 PISO - GAS",
@@ -213,12 +213,12 @@ export const getEstadoLabel = (estado) => {
 
 export const getEstadoColor = (estado) => {
   const colors = {
-    pendiente: "bg-yellow-100 text-yellow-800",
-    pagado: "bg-green-100 text-green-800",
-    parcial: "bg-blue-100 text-blue-800",
-    anulado: "bg-red-100 text-red-800",
+    pendiente: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+    pagado: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    parcial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    anulado: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
   };
-  return colors[estado] || "bg-gray-100 text-gray-800";
+  return colors[estado] || "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
 };
 
 export const getSumableIva = (movimiento) => {
@@ -257,8 +257,8 @@ export const computeFacturaTaxes = (factura) => {
     base = Math.round((valorTotal / 1.19) * 100) / 100; // mantener 2 decimales
     iva = Math.round((valorTotal - base) * 100) / 100;
   }
-  // ICA = 1.25% sobre la base (antes de IVA)
-  const ica = Math.round(base * 0.0125 * 100) / 100;
+  // ICA = 1.25% sobre la base (antes de IVA) - solo para facturas electrónicas
+  const ica = esElectronica ? Math.round(base * 0.0125 * 100) / 100 : 0;
   return {
     base: Math.round(base),
     iva: Math.round(iva),

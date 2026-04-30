@@ -51,7 +51,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-hidden flex flex-col">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(243,146,0,0.28),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(243,146,0,0.18),transparent_30%),linear-gradient(135deg,#020617_0%,#0f172a_55%,#111827_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(240,147,11,0.28),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(240,147,11,0.18),transparent_30%),linear-gradient(135deg,#020617_0%,#0f172a_55%,#111827_100%)]" />
       <div className="relative flex items-center justify-center pt-6 lg:pt-8"></div>
       <div className="relative flex-1 grid lg:grid-cols-[1.1fr_0.9fr]">
         <section className="hidden lg:flex flex-col justify-center gap-12 xl:p-16">
@@ -94,10 +94,10 @@ export default function LoginPage() {
         </section>
 
         <section className="relative flex items-center justify-center p-4 sm:p-8 lg:p-12">
-          <div className="w-full max-w-md rounded-4xl border border-white/10 bg-white/95 text-slate-900 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl overflow-hidden">
+          <div className="w-full max-w-md rounded-4xl border border-white/10 bg-white/95 text-slate-900 shadow-2xl shadow-amber-950/30 backdrop-blur-xl overflow-hidden">
             <div className="p-8 sm:p-10 space-y-8">
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                   <LogIn size={14} />
                   Acceso al sistema
                 </div>
@@ -170,7 +170,7 @@ export default function LoginPage() {
           href="https://nilspineda.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold text-[#28af90] hover:text-[#1c7c66] uppercase"
+          className="font-semibold text-[#f0930b] hover:text-[#d97706] uppercase"
         >
           Nils Pineda - {new Date().getFullYear()}
         </a>{" "}

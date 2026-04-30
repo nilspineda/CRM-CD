@@ -99,7 +99,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
@@ -126,11 +126,13 @@ export default function DashboardLayout() {
         </div>
 
         <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-700/50">
-          <div className="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500 to-cyan-400 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0">
             <span className="text-lg font-bold">CD</span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold truncate">Concepto Digital</h1>
+            <h1 className="text-md font-bold truncate">
+              {access.setSidebarOpen}
+            </h1>
             <p className="text-xs text-slate-400">Sistema Administrativo</p>
           </div>
         </div>
@@ -145,7 +147,7 @@ export default function DashboardLayout() {
                 group flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
                 ${
                   isActive
-                    ? "bg-linear-to-r from-blue-600/20 to-transparent text-white border-l-2 border-blue-500"
+                    ? "bg-gradient-to-r from-amber-600/20 to-transparent text-white border-l-2 border-amber-500"
                     : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                 }
               `}
@@ -153,7 +155,7 @@ export default function DashboardLayout() {
               <div
                 className={`p-2 rounded-lg shrink-0 ${
                   location.pathname === item.path
-                    ? "bg-blue-500/20 text-blue-400"
+                    ? "bg-amber-500/20 text-amber-400"
                     : "bg-slate-700/50 text-slate-400 group-hover:text-white"
                 }`}
               >
@@ -171,7 +173,7 @@ export default function DashboardLayout() {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50">
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50">
-            <div className="w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-cyan-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0">
               <User size={18} />
             </div>
             <div className="flex-1 min-w-0">
@@ -193,34 +195,34 @@ export default function DashboardLayout() {
       </aside>
 
       <div className="lg:pl-72 min-h-screen flex flex-col min-w-0">
-        <header className="h-16 sm:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between gap-3 px-3 sm:px-6 sticky top-0 z-30 shrink-0">
+        <header className="h-16 sm:h-20 bg-white dark:bg-slate-900 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3 px-3 sm:px-6 sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
-              className="lg:hidden p-2 sm:p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shrink-0"
+              className="lg:hidden p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shrink-0"
               onClick={() => setSidebarOpen(true)}
               aria-label="Abrir menu"
             >
               <Menu size={20} />
             </button>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-xl font-bold text-slate-800 truncate">
+              <h2 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {currentPage?.label || "Dashboard"}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 hidden sm:block truncate">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block truncate">
                 {currentPage?.description || "Resumen general"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 rounded-full">
+            <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs sm:text-sm font-medium text-slate-600">
+              <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
                 Sistema activo
               </span>
             </div>
             <button
-              className="p-2 sm:p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              className="p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
               aria-label="Configuracion"
             >
               <Settings size={18} />
@@ -232,13 +234,13 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
 
-        <footer className="border-t border-slate-200/70 bg-white/70 px-4 py-3 text-center text-sm text-slate-600">
+        <footer className="border-t border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-400">
           Elaborado por{" "}
           <a
             href="https://nilspineda.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-blue-700 hover:text-blue-800 underline decoration-blue-300 underline-offset-2"
+            className="font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 underline decoration-amber-300 dark:decoration-amber-700 underline-offset-2"
           >
             Nils pineda
           </a>

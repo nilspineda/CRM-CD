@@ -324,10 +324,10 @@ export default function FacturasPage() {
     <div className="space-y-4 sm:space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 w-full">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
             Facturación
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             Control de facturas y remisiones
           </p>
         </div>
@@ -364,7 +364,7 @@ export default function FacturasPage() {
                 placeholder="Buscar por número, cliente o cuenta..."
                 value={filtros.busqueda}
                 onChange={handleFiltroChange}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20"
               />
             </div>
             <input
@@ -374,13 +374,13 @@ export default function FacturasPage() {
                 setMesResumen(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
             <select
               name="estado"
               value={filtros.estado}
               onChange={handleFiltroChange}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800"
             >
               <option value="">Todos los estados</option>
               {ESTADOS_FILTRO.map((est) => (
@@ -391,7 +391,7 @@ export default function FacturasPage() {
             </select>
             <button
               onClick={clearFilters}
-              className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-100"
+              className="px-3 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-900/50"
             >
               Limpiar
             </button>
@@ -401,44 +401,44 @@ export default function FacturasPage() {
 
       <Card className="w-full overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 hidden sm:table-header-group">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Número
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Fecha
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Cliente
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Base
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   ICA
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   IVA
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Valor
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Estado
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading || clientesLoading || cuentasLoading ? (
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-4 py-12 text-center text-slate-500"
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     Cargando...
                   </td>
@@ -447,7 +447,7 @@ export default function FacturasPage() {
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-4 py-12 text-center text-slate-500"
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay facturas para mostrar
                   </td>
@@ -456,29 +456,29 @@ export default function FacturasPage() {
                 facturasPaginadas.map((factura) => {
                   const taxes = computeFacturaTaxes(factura);
                   return (
-                    <tr key={factura.id} className="hover:bg-slate-50">
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 font-medium">
+                    <tr key={factura.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 dark:bg-slate-800">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
                         {factura.prefijo}-{factura.numero_factura}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         {formatDate(factura.fecha_pago)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         <div>{factura.cliente_nit}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                           {factura.cliente_nombre}
                         </div>
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.base)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.ica)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.iva)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(factura.valor_total)}
                       </td>
                       <td className="px-3 sm:px-4 py-3">
@@ -494,7 +494,7 @@ export default function FacturasPage() {
                             <button
                               onClick={() => openEstadoModal(factura)}
                               disabled={isMutating}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                              className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg disabled:opacity-50"
                             >
                               <CheckCircle2 size={16} />
                             </button>
@@ -503,7 +503,7 @@ export default function FacturasPage() {
                             <button
                               onClick={() => openFacturaModal(factura)}
                               disabled={isMutating}
-                              className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg disabled:opacity-50"
+                              className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50"
                             >
                               <Receipt size={16} />
                             </button>
@@ -519,26 +519,26 @@ export default function FacturasPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <div className="text-sm text-slate-600">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
               Mostrando {(page - 1) * PAGE_SIZE + 1} -{" "}
               {Math.min(page * PAGE_SIZE, facturasEnriquecidas.length)} de{" "}
               {facturasEnriquecidas.length}
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page <= 1}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
-              >
-                Anterior
+onClick={() => handlePageChange(page - 1)}
+                 disabled={page <= 1}
+                 className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
+               >
+                 Anterior
               </button>
               <button
-                onClick={() => handlePageChange(page + 1)}
-                disabled={page >= totalPages}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
-              >
-                Siguiente
+onClick={() => handlePageChange(page + 1)}
+                 disabled={page >= totalPages}
+                 className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
+               >
+                 Siguiente
               </button>
             </div>
           </div>
@@ -672,7 +672,7 @@ export default function FacturasPage() {
               setEstadoForm((prev) => ({ ...prev, fecha_pago: e.target.value }))
             }
           />
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
             Valor:{" "}
             <strong>
               {selectedFactura

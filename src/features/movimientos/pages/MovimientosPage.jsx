@@ -1,4 +1,4 @@
-// filepath: src/features/movimientos/pages/MovimientosPage.jsx
+﻿// filepath: src/features/movimientos/pages/MovimientosPage.jsx
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -367,7 +367,7 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
                   Fecha
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase min-w-[200px]">
                   Tipo
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
@@ -409,8 +409,8 @@ export default function MovimientosPage() {
                     <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
                       {formatDate(movimiento.fecha)}
                     </td>
-                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
-                      {getTipoMovimientoLabel(movimiento.tipo_movimiento)}
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 min-w-[200px] max-w-[250px]" title={getTipoMovimientoLabel(movimiento.tipo_movimiento)}>
+                      <span className="block truncate">{getTipoMovimientoLabel(movimiento.tipo_movimiento)}</span>
                     </td>
                     <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
                       {movimiento.cuentas_financieras?.nombre || "-"}

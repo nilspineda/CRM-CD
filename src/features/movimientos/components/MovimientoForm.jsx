@@ -1,15 +1,23 @@
-// filepath: src/features/movimientos/components/MovimientoForm.jsx
 import { useEffect, useState } from "react";
 import Input, { Select, Textarea } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../services/movimientosService";
-import { getTipoMovimientoLabel } from "../../../lib/utils";
+import { getTipoMovimientoLabel, isIngreso } from "../../../lib/utils";
+import { TIPOS_MOVIMIENTO_BANCARIOS, CATEGORY_ORDER } from "../constants";
 
 const ESTADOS = [
   { value: "pendiente", label: "Pendiente" },
   { value: "pagado", label: "Pagado" },
 ];
+
+const tiposPorCategoria = {};
+TIPOS_MOVIMIENTO_BANCARIOS.forEach((tipo) => {
+  if (!tiposPorCategoria[tipo.category]) {
+    tiposPorCategoria[tipo.category] = [];
+  }
+  tiposPorCategoria[tipo.category].push(tipo);
+});
 
 export default function MovimientoForm({
   movimiento,
@@ -23,7 +31,7 @@ export default function MovimientoForm({
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split("T")[0],
-    tipo_movimiento: initialData.tipo_movimiento || "factura_venta",
+    tipo_movimiento: initialData.tipo_movimiento || "servicios_agua_1p",
     cuenta_id: initialData.cuenta_id || "",
     valor_total: initialData.valor_total || 0,
     estado: initialData.estado || "pendiente",
@@ -40,7 +48,7 @@ export default function MovimientoForm({
     if (movimiento) {
       setFormData({
         fecha: movimiento.fecha || new Date().toISOString().split("T")[0],
-        tipo_movimiento: movimiento.tipo_movimiento || "factura_venta",
+        tipo_movimiento: movimiento.tipo_movimiento || "servicios_agua_1p",
         cuenta_id: movimiento.cuenta_id || "",
         valor_total: movimiento.valor_total || 0,
         estado: movimiento.estado || "pendiente",
@@ -65,7 +73,7 @@ export default function MovimientoForm({
       setTiposMovimiento(data || []);
     } catch (error) {
       console.error("Error cargando tipos de movimiento:", error);
-      setTiposMovimiento(["factura_venta"]);
+      setTiposMovimiento(TIPOS_MOVIMIENTO_BANCARIOS.map((t) => t.value));
     }
   };
 
@@ -119,16 +127,17 @@ export default function MovimientoForm({
     (cuenta) => cuenta.id === formData.cuenta_id,
   );
   const saldoActualCuenta = cuentaSeleccionada?.saldo_actual || 0;
-  const saldoDespuesDelPago =
-    formData.estado === "pagado"
-      ? saldoActualCuenta - (Number(formData.valor_total) || 0)
-      : saldoActualCuenta;
+  const valor = Number(formData.valor_total) || 0;
+  const esIngreso = isIngreso(formData.tipo_movimiento);
+  const impacto = formData.estado === "pagado"
+    ? (esIngreso ? valor : -valor)
+    : 0;
+  const saldoDespues = saldoActualCuenta + impacto;
 
-  const tiposSelect =
-    tiposMovimiento.length > 0 ? tiposMovimiento : ["factura_venta"];
-  const tiposParaMostrar = movimiento?.tipo_movimiento
-    ? Array.from(new Set([movimiento.tipo_movimiento, ...tiposSelect]))
-    : tiposSelect;
+  const tiposConocidos = new Set(
+    TIPOS_MOVIMIENTO_BANCARIOS.map((t) => t.value),
+  );
+  const tiposExtras = tiposMovimiento.filter((t) => !tiposConocidos.has(t));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -151,11 +160,28 @@ export default function MovimientoForm({
           error={errors.tipo_movimiento}
           required
         >
-          {tiposParaMostrar.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {getTipoMovimientoLabel(tipo)}
-            </option>
-          ))}
+          {CATEGORY_ORDER.map((categoria) => {
+            const tipos = tiposPorCategoria[categoria];
+            if (!tipos) return null;
+            return (
+              <optgroup key={categoria} label={categoria}>
+                {tipos.map((tipo) => (
+                  <option key={tipo.value} value={tipo.value}>
+                    {tipo.label}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
+          {tiposExtras.length > 0 && (
+            <optgroup label="Otros">
+              {tiposExtras.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {getTipoMovimientoLabel(tipo)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </Select>
 
         <Select
@@ -169,7 +195,7 @@ export default function MovimientoForm({
           <option value="">Seleccionar cuenta</option>
           {cuentas.map((cuenta) => (
             <option key={cuenta.id} value={cuenta.id}>
-              {cuenta.nombre}
+              {cuenta.nombre} — {cuenta.saldo_actual?.toLocaleString("es-CO", { style: "currency", currency: "COP" })}
             </option>
           ))}
         </Select>
@@ -211,7 +237,7 @@ export default function MovimientoForm({
         required
       />
 
-      {cuentaSeleccionada && (
+      {cuentaSeleccionada && formData.estado === "pagado" && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
           <p className="font-medium text-slate-800">
             Saldo actual de la cuenta
@@ -224,9 +250,16 @@ export default function MovimientoForm({
               currency: "COP",
             })}
           </p>
-          <p>
-            Saldo después del pago:{" "}
-            {saldoDespuesDelPago.toLocaleString("es-CO", {
+          <p className={esIngreso ? "text-green-600" : "text-red-600"}>
+            {esIngreso ? "+" : "−"}{" "}
+            {valor.toLocaleString("es-CO", {
+              style: "currency",
+              currency: "COP",
+            })}
+          </p>
+          <p className="font-semibold text-slate-800">
+            Saldo después:{" "}
+            {saldoDespues.toLocaleString("es-CO", {
               style: "currency",
               currency: "COP",
             })}

@@ -7,6 +7,7 @@ import {
   normalizeTipoMovimiento,
 } from "../../../lib/utils";
 import { computeFacturaTaxes } from "../../../lib/utils";
+import { TIPOS_MOVIMIENTO_BANCARIOS } from "../constants";
 
 const normalizeMovimiento = (movimiento) => ({
   ...movimiento,
@@ -25,7 +26,9 @@ const normalizeMovimiento = (movimiento) => ({
 
 const getMovimientoImpacto = (movimiento) => {
   if (!movimiento || movimiento.estado !== "pagado") return 0;
-  return -Math.abs(movimiento.valor_total || 0);
+  const val = Math.abs(movimiento.valor_total || 0);
+  if (isIngreso(movimiento.tipo_movimiento)) return val;
+  return -val;
 };
 
 const applyCuentaImpacto = async (cuentaId, impacto) => {
@@ -59,20 +62,21 @@ export const movimientosService = {
 
     if (error) throw error;
 
-    const tipos = Array.from(
+    const tiposBD = Array.from(
       new Set((data || []).map((row) => row.tipo_movimiento).filter(Boolean)),
-    );
+    ).map((t) => normalizeTipoMovimiento(t));
 
-    // Normalizar valores (la BD a veces almacena la etiqueta legible)
-    return tipos.map((t) => normalizeTipoMovimiento(t));
+    const tiposConstantes = TIPOS_MOVIMIENTO_BANCARIOS.map((t) => t.value);
+
+    const todosTipos = Array.from(new Set([...tiposConstantes, ...tiposBD]));
+    return todosTipos;
   },
 
   // Obtener todos los movimientos con filtros
   async getAll(filtros = {}) {
     let query = supabase.from("movimientos_financieros").select(`
         *,
-        cuentas_financieras(nombre),
-        categorias_financieras(nombre)
+        cuentas_financieras(nombre)
       `);
 
     const ordenarPor = filtros.ordenarPor || "fecha_desc";
@@ -120,8 +124,7 @@ export const movimientosService = {
       .select(
         `
         *,
-        cuentas_financieras(nombre),
-        categorias_financieras(nombre)
+        cuentas_financieras(nombre)
       `,
       )
       .eq("id", id)

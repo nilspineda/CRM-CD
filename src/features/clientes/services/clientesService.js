@@ -53,4 +53,15 @@ export const clientesService = {
     if (error) throw error;
     return data[0];
   },
+
+  async getFacturasPorCliente(clienteId) {
+    const { data, error } = await supabase
+      .from("facturas")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("fecha_creacion", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
 };
