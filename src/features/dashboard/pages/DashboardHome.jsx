@@ -123,17 +123,21 @@ export default function DashboardHome() {
     queryFn: cuentasService.getActivas,
   });
 
-  const { data: movimientosData = [], isLoading: movimientosLoading } = useQuery({
-    queryKey: ["movimientos", anioActual],
-    queryFn: () =>
-      movimientosService.getAll({
-        fechaInicio: anioActual.start.toISOString().split("T")[0],
-        fechaFin: anioActual.end.toISOString().split("T")[0],
-        ordenarPor: "fecha_desc",
-      }),
-  });
+  const { data: movimientosData = [], isLoading: movimientosLoading } =
+    useQuery({
+      queryKey: ["movimientos", anioActual],
+      queryFn: () =>
+        movimientosService.getAll({
+          fechaInicio: anioActual.start.toISOString().split("T")[0],
+          fechaFin: anioActual.end.toISOString().split("T")[0],
+          ordenarPor: "fecha_desc",
+        }),
+    });
 
-  const { data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0 }, isLoading: statsLoading } = useQuery({
+  const {
+    data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0 },
+    isLoading: statsLoading,
+  } = useQuery({
     queryKey: ["movimientos", "stats", mesActual],
     queryFn: () =>
       movimientosService.getEstadisticas(
@@ -351,6 +355,20 @@ export default function DashboardHome() {
               </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
                 {cuentasData.length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="w-full">
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
+            <div className="p-2 sm:p-3 bg-amber-100 rounded-lg shrink-0">
+              <FileText className="text-amber-600 w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-slate-600">ICA (1.25%)</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 truncate">
+                {formatCurrency(stats.valor125)}
               </p>
             </div>
           </CardContent>

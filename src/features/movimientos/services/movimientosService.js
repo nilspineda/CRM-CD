@@ -6,6 +6,7 @@ import {
   isIngreso,
   normalizeTipoMovimiento,
 } from "../../../lib/utils";
+import { computeFacturaTaxes } from "../../../lib/utils";
 
 const normalizeMovimiento = (movimiento) => ({
   ...movimiento,
@@ -225,6 +226,29 @@ export const movimientosService = {
         stats.facturas += 1;
       }
     });
+
+    // Además, sumar ICA/IVA provenientes de la tabla `facturas` (facturas pagadas)
+    // para incluir el ICA (1.25% antes del IVA) en las estadísticas del dashboard.
+    try {
+      const factQuery = await supabase
+        .from("facturas")
+        .select("prefijo, valor_total, estado")
+        .gte("fecha_creacion", fechaInicio)
+        .lte("fecha_creacion", fechaFin)
+        .eq("estado", "pagado");
+
+      if (!factQuery.error && factQuery.data) {
+        factQuery.data.forEach((f) => {
+          const taxes = computeFacturaTaxes(f);
+          stats.iva += taxes.iva || 0;
+          stats.valor125 += taxes.ica || 0;
+          stats.facturas += 1;
+          stats.ingresos += f.valor_total || 0;
+        });
+      }
+    } catch (err) {
+      console.error("Error calculando stats desde facturas:", err);
+    }
 
     return stats;
   },

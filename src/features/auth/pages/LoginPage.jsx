@@ -69,7 +69,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-8">
               <h1 className="text-5xl xl:text-6xl font-black uppercase py-2">
-                CRM movimientos y gastos
+                Software de gestión financiera
               </h1>
               <p className="text-lg text-slate-300 max-w-lg leading-8">
                 Inicia sesión para trabajar según tu rol. SuperAdmin administra

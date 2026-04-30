@@ -25,6 +25,7 @@ import {
   getEstadoColor,
   getEstadoLabel,
 } from "../../../lib/utils";
+import { computeFacturaTaxes } from "../../../lib/utils";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useAuth } from "../../auth/AuthProvider";
 import { canPerform, PERMISSIONS } from "../../auth/permissions";
@@ -299,6 +300,9 @@ export default function FacturasPage() {
         { header: "Fecha", value: (f) => formatDate(f.fecha_pago) },
         { header: "Cliente", value: (f) => f.cliente_nit },
         { header: "Nombre", value: (f) => f.cliente_nombre },
+        { header: "Base", value: (f) => computeFacturaTaxes(f).base || 0 },
+        { header: "ICA", value: (f) => computeFacturaTaxes(f).ica || 0 },
+        { header: "IVA", value: (f) => computeFacturaTaxes(f).iva || 0 },
         { header: "Valor", value: (f) => f.valor_total || 0 },
         { header: "Estado", value: (f) => getEstadoLabel(f.estado) },
       ],
@@ -410,6 +414,15 @@ export default function FacturasPage() {
                   Cliente
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                  Base
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                  ICA
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                  IVA
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
                   Valor
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
@@ -424,7 +437,7 @@ export default function FacturasPage() {
               {isLoading || clientesLoading || cuentasLoading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={9}
                     className="px-4 py-12 text-center text-slate-500"
                   >
                     Cargando...
@@ -433,61 +446,73 @@ export default function FacturasPage() {
               ) : facturasPaginadas.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={9}
                     className="px-4 py-12 text-center text-slate-500"
                   >
                     No hay facturas para mostrar
                   </td>
                 </tr>
               ) : (
-                facturasPaginadas.map((factura) => (
-                  <tr key={factura.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 font-medium">
-                      {factura.prefijo}-{factura.numero_factura}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
-                      {formatDate(factura.fecha_pago)}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
-                      <div>{factura.cliente_nit}</div>
-                      <div className="text-xs text-slate-500">
-                        {factura.cliente_nombre}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
-                      {formatCurrency(factura.valor_total)}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(factura.estado)}`}
-                      >
-                        {getEstadoLabel(factura.estado)}
-                      </span>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        {canChangeFacturaState && (
-                          <button
-                            onClick={() => openEstadoModal(factura)}
-                            disabled={isMutating}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
-                          >
-                            <CheckCircle2 size={16} />
-                          </button>
-                        )}
-                        {canEditFactura && (
-                          <button
-                            onClick={() => openFacturaModal(factura)}
-                            disabled={isMutating}
-                            className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg disabled:opacity-50"
-                          >
-                            <Receipt size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                facturasPaginadas.map((factura) => {
+                  const taxes = computeFacturaTaxes(factura);
+                  return (
+                    <tr key={factura.id} className="hover:bg-slate-50">
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 font-medium">
+                        {factura.prefijo}-{factura.numero_factura}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
+                        {formatDate(factura.fecha_pago)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700">
+                        <div>{factura.cliente_nit}</div>
+                        <div className="text-xs text-slate-500">
+                          {factura.cliente_nombre}
+                        </div>
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                        {formatCurrency(taxes.base)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                        {formatCurrency(taxes.ica)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                        {formatCurrency(taxes.iva)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                        {formatCurrency(factura.valor_total)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3">
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(factura.estado)}`}
+                        >
+                          {getEstadoLabel(factura.estado)}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          {canChangeFacturaState && (
+                            <button
+                              onClick={() => openEstadoModal(factura)}
+                              disabled={isMutating}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                          )}
+                          {canEditFactura && (
+                            <button
+                              onClick={() => openFacturaModal(factura)}
+                              disabled={isMutating}
+                              className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg disabled:opacity-50"
+                            >
+                              <Receipt size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -554,8 +579,8 @@ export default function FacturasPage() {
               required
             />
           </div>
-          <Input
-            label="NIT Cliente"
+          <Select
+            label="Cliente"
             value={facturaForm.cliente_nit}
             onChange={(e) =>
               setFacturaForm((prev) => ({
@@ -565,7 +590,14 @@ export default function FacturasPage() {
             }
             error={errors.cliente_nit}
             required
-          />
+          >
+            <option value="">Seleccionar cliente</option>
+            {clientesData.map((c) => (
+              <option key={c.nit} value={c.nit}>
+                {c.nit} - {c.nombre}
+              </option>
+            ))}
+          </Select>
           <Input
             label="Fecha"
             type="date"

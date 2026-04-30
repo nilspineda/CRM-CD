@@ -245,6 +245,27 @@ export const getValor125 = (movimiento) => {
   return Math.round(getBaseAntesIva(movimiento) * 0.0125);
 };
 
+// Calcular base, IVA e ICA para una factura
+// Regla: si la factura es electrónica (prefijo 'FE'), se aplica IVA 19% sobre la base.
+// Se asume que `valor_total` es el valor final (incluye IVA cuando aplica).
+export const computeFacturaTaxes = (factura) => {
+  const valorTotal = Number(factura?.valor_total) || 0;
+  const esElectronica = (factura?.prefijo || "").toUpperCase() === "FE";
+  let base = valorTotal;
+  let iva = 0;
+  if (esElectronica) {
+    base = Math.round((valorTotal / 1.19) * 100) / 100; // mantener 2 decimales
+    iva = Math.round((valorTotal - base) * 100) / 100;
+  }
+  // ICA = 1.25% sobre la base (antes de IVA)
+  const ica = Math.round(base * 0.0125 * 100) / 100;
+  return {
+    base: Math.round(base),
+    iva: Math.round(iva),
+    ica: Math.round(ica),
+  };
+};
+
 export const isIngreso = (tipo) =>
   [
     "factura_venta",
