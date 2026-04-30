@@ -4,6 +4,7 @@ import { LogIn, ShieldCheck, Mail } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import { useAuth } from "../AuthProvider";
+import logo from "../../../assets/logo.png";
 
 export default function LoginPage() {
   const { signIn, loading, user } = useAuth();
@@ -49,18 +50,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.28),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.18),transparent_30%),linear-gradient(135deg,#020617_0%,#0f172a_55%,#111827_100%)]" />
-      <div className="relative min-h-screen grid lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="hidden lg:flex flex-col justify-between p-10 xl:p-16">
-          <div className="space-y-8 max-w-xl">
+    <div className="min-h-screen bg-slate-950 text-white overflow-hidden flex flex-col">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(243,146,0,0.28),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(243,146,0,0.18),transparent_30%),linear-gradient(135deg,#020617_0%,#0f172a_55%,#111827_100%)]" />
+      <div className="relative flex items-center justify-center pt-6 lg:pt-8"></div>
+      <div className="relative flex-1 grid lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="hidden lg:flex flex-col justify-center gap-12 xl:p-16">
+          <div className="space-y-4 max-w-xl">
+            <a
+              href="https://conceptodigital.com.co"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src={logo} alt="logo" className="h-40 w-auto" />
+            </a>
             <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 backdrop-blur">
               <ShieldCheck size={16} />
               Acceso privado por invitación
             </div>
-            <div className="space-y-5">
-              <h1 className="text-5xl xl:text-6xl font-black tracking-tight leading-tight">
-                CRM con control de acceso real.
+            <div className="space-y-8">
+              <h1 className="text-5xl xl:text-6xl font-black uppercase py-2">
+                CRM movimientos y gastos
               </h1>
               <p className="text-lg text-slate-300 max-w-lg leading-8">
                 Inicia sesión para trabajar según tu rol. SuperAdmin administra
@@ -154,6 +163,19 @@ export default function LoginPage() {
           </div>
         </section>
       </div>
+
+      <footer className="relative border-t border-white/10 bg-slate-950/50 px-4 py-6 text-center text-sm text-slate-400 backdrop-blur ">
+        Elaborado por{" "}
+        <a
+          href="https://nilspineda.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#28af90] hover:text-[#1c7c66] uppercase"
+        >
+          Nils Pineda - {new Date().getFullYear()}
+        </a>{" "}
+        | Concepto Digital Impresores S.A.S
+      </footer>
     </div>
   );
 }
