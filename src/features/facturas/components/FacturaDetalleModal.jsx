@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Modal from "../../../components/ui/Modal";
 import { formatCurrency, formatDate, computeFacturaTaxes } from "../../../lib/utils";
+import { facturasService } from "../services/facturasService";
 
 const ESTADO_STYLES = {
   pagado: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
@@ -15,7 +18,6 @@ const ESTADO_LABELS = {
   anulado: "Anulado",
 };
 
-/** Parsea el historial de pagos guardado en observaciones */
 function parseHistorial(observaciones) {
   try {
     const match = (observaciones || "").match(/\[HISTORIAL\](.*?)\[\/HISTORIAL\]/s);
@@ -24,12 +26,10 @@ function parseHistorial(observaciones) {
   return null;
 }
 
-/** Extrae las observaciones del usuario, sin el bloque de historial */
 function parseObservaciones(observaciones) {
   return (observaciones || "").replace(/\[HISTORIAL\].*?\[\/HISTORIAL\]/s, "").trim();
 }
 
-/** Días restantes desde hoy hasta una fecha */
 function diasHasta(fechaStr) {
   if (!fechaStr) return null;
   const fecha = new Date(fechaStr + "T00:00:00");
@@ -49,6 +49,26 @@ function InfoRow({ label, value, className = "" }) {
 }
 
 export default function FacturaDetalleModal({ isOpen, onClose, factura }) {
+  const queryClient = useQueryClient();
+  const [historialLocal, setHistorialLocal] = useState(null);
+  const [editandoIdx, setEditandoIdx] = useState(null);
+  const [fechaEditada, setFechaEditada] = useState("");
+
+  // Inicializar historial desde factura
+  useEffect(() => {
+    if (factura) {
+      setHistorialLocal(parseHistorial(factura.observaciones));
+      setEditandoIdx(null);
+    }
+  }, [factura]);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => facturasService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["facturas"] });
+    },
+  });
+
   if (!factura) return null;
 
   const taxes = computeFacturaTaxes(factura);
@@ -59,12 +79,58 @@ export default function FacturaDetalleModal({ isOpen, onClose, factura }) {
     ? Math.max(0, (factura.valor_total || 0) - valorAbonado)
     : estado === "pagado" ? 0 : (factura.valor_total || 0);
 
-  // Parsear historial de pagos
-  const historialParsed = parseHistorial(factura.observaciones);
   const obsUsuario = parseObservaciones(factura.observaciones);
-
-  // Días restantes para próximo pago
   const diasProximo = diasHasta(factura.fecha_proximo_pago);
+
+  // Guardar fecha editada de un abono
+  const handleSaveFecha = async (idx) => {
+    if (!historialLocal) return;
+    const actualizado = historialLocal.map((p, i) =>
+      i === idx ? { ...p, fecha: fechaEditada } : p
+    );
+    setHistorialLocal(actualizado);
+    setEditandoIdx(null);
+
+    // Persistir en observaciones
+    const obsBase = obsUsuario;
+    const nuevaObs = `${obsBase}[HISTORIAL]${JSON.stringify(actualizado)}[\/HISTORIAL]`;
+    try {
+      await updateMutation.mutateAsync({
+        id: factura.id,
+        data: { ...factura, observaciones: nuevaObs },
+      });
+    } catch (err) {
+      console.error("Error guardando fecha:", err);
+    }
+  };
+
+  const handleStartEdit = (idx, fechaActual) => {
+    setEditandoIdx(idx);
+    setFechaEditada(fechaActual || "");
+  };
+
+  // Marcar/desmarcar un abono como aplicado (confirmado)
+  const handleToggleConfirmado = async (idx) => {
+    if (!historialLocal) return;
+    const actualizado = historialLocal.map((p, i) =>
+      i === idx ? { ...p, confirmado: !p.confirmado } : p
+    );
+    setHistorialLocal(actualizado);
+    const obsBase = parseObservaciones(factura.observaciones);
+    const nuevaObs = `${obsBase}[HISTORIAL]${JSON.stringify(actualizado)}[\/HISTORIAL]`;
+    try {
+      await updateMutation.mutateAsync({
+        id: factura.id,
+        data: { ...factura, observaciones: nuevaObs },
+      });
+    } catch (err) {
+      console.error("Error confirmando abono:", err);
+      // Revertir en caso de error
+      setHistorialLocal(historialLocal);
+    }
+  };
+
+  const isSaving = updateMutation.isPending;
 
   return (
     <Modal
@@ -133,51 +199,121 @@ export default function FacturaDetalleModal({ isOpen, onClose, factura }) {
             Historial de pagos
           </h3>
 
-          {historialParsed && historialParsed.length > 0 ? (
+          {historialLocal && historialLocal.length > 0 ? (
             <div className="space-y-2">
-              {historialParsed.map((pago, idx) => {
+              {historialLocal.map((pago, idx) => {
                 const dias = diasHasta(pago.fecha);
-                const esFuturo = dias !== null && dias > 0;
+                const enEdicion = editandoIdx === idx;
+                const confirmado = !!pago.confirmado;
+
                 return (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20"
+                    className={`p-3 rounded-xl border transition-colors ${
+                      confirmado
+                        ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20"
+                        : "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20"
+                    }`}
                   >
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                        Abono #{idx + 1}
-                        {esFuturo && (
-                          <span className="ml-2 text-xs font-normal text-blue-600 dark:text-blue-400">
-                            (programado)
-                          </span>
-                        )}
-                      </p>
-                      {pago.fecha && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {formatDate(pago.fecha)}
-                          {dias !== null && (
-                            <span className={`ml-2 font-semibold ${
-                              dias < 0 ? "text-red-500" : dias === 0 ? "text-green-500" : "text-blue-500"
-                            }`}>
-                              {dias < 0 ? `Hace ${Math.abs(dias)}d` : dias === 0 ? "Hoy" : `En ${dias}d`}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-semibold ${
+                            confirmado
+                              ? "text-green-700 dark:text-green-300"
+                              : "text-amber-700 dark:text-amber-300"
+                          }`}>
+                            Abono #{idx + 1}
+                          </p>
+                          {confirmado && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200">
+                              ✓ Aplicado
                             </span>
                           )}
+                        </div>
+
+                        {enEdicion ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="date"
+                              value={fechaEditada}
+                              onChange={(e) => setFechaEditada(e.target.value)}
+                              className="px-2 py-1 text-xs border border-amber-400 dark:border-amber-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            />
+                            <button
+                              onClick={() => handleSaveFecha(idx)}
+                              disabled={isSaving || !fechaEditada}
+                              className="px-2 py-1 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                            >
+                              {isSaving ? "..." : "✓"}
+                            </button>
+                            <button
+                              onClick={() => setEditandoIdx(null)}
+                              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {pago.fecha ? (
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {formatDate(pago.fecha)}
+                                {dias !== null && (
+                                  <span className={`ml-2 font-semibold ${
+                                    dias < 0 ? "text-red-500" : dias === 0 ? "text-green-500" : "text-blue-500"
+                                  }`}>
+                                    {dias < 0 ? `Hace ${Math.abs(dias)}d` : dias === 0 ? "Hoy" : `En ${dias}d`}
+                                  </span>
+                                )}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-slate-400 italic">Sin fecha</p>
+                            )}
+                            <button
+                              onClick={() => handleStartEdit(idx, pago.fecha)}
+                              className="text-[10px] text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 underline transition-colors"
+                            >
+                              editar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <p className={`text-sm font-bold ${
+                          confirmado
+                            ? "text-green-700 dark:text-green-300"
+                            : "text-amber-700 dark:text-amber-300"
+                        }`}>
+                          {formatCurrency(pago.valor)}
                         </p>
-                      )}
+                        {/* Botón confirmar/desconfirmar */}
+                        <button
+                          onClick={() => handleToggleConfirmado(idx)}
+                          disabled={isSaving}
+                          title={confirmado ? "Desmarcar como aplicado" : "Marcar como aplicado"}
+                          className={`flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
+                            confirmado
+                              ? "border-green-400 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50"
+                              : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-green-400 hover:text-green-600 dark:hover:text-green-400"
+                          }`}
+                        >
+                          <span>{confirmado ? "✓" : "○"}</span>
+                          <span>{confirmado ? "Aplicado" : "Confirmar"}</span>
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                      {formatCurrency(pago.valor)}
-                    </p>
                   </div>
                 );
               })}
 
-              {/* Totales del historial */}
+              {/* Totales */}
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-center">
                   <p className="text-xs text-green-600 dark:text-green-400">Total abonado</p>
                   <p className="text-sm font-bold text-green-700 dark:text-green-300">
-                    {formatCurrency(historialParsed.reduce((s, p) => s + p.valor, 0))}
+                    {formatCurrency(historialLocal.reduce((s, p) => s + p.valor, 0))}
                   </p>
                 </div>
                 {esParcial && (
@@ -203,7 +339,6 @@ export default function FacturaDetalleModal({ isOpen, onClose, factura }) {
               </p>
             </div>
           ) : esParcial && valorAbonado > 0 ? (
-            // Fallback: no hay historial parseado pero sí valor_pagado
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
                 <div>
