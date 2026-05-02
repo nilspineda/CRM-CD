@@ -18,6 +18,9 @@ const DashboardHome = lazy(
 const FacturasPage = lazy(
   () => import("../features/facturas/pages/FacturasPage"),
 );
+const CarteraPage = lazy(
+  () => import("../features/cartera/pages/CarteraPage"),
+);
 const IvaPage = lazy(() => import("../features/iva/pages/IvaPage"));
 const ReportesPage = lazy(
   () => import("../features/reportes/pages/ReportesPage"),
@@ -97,6 +100,16 @@ const router = createBrowserRouter([
           <PermissionRoute moduleKey="facturas">
             <Suspense fallback={<LoadingFallback />}>
               <FacturasPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "cartera",
+        element: (
+          <PermissionRoute moduleKey="cartera">
+            <Suspense fallback={<LoadingFallback />}>
+              <CarteraPage />
             </Suspense>
           </PermissionRoute>
         ),

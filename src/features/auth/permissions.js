@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   CUENTAS_VIEW: "module.cuentas",
   IVA_VIEW: "module.iva",
   REPORTES_VIEW: "module.reportes",
+  CARTERA_VIEW: "module.cartera",
   CLIENTES_CREATE: "action.clientes.create",
   CLIENTES_EDIT: "action.clientes.edit",
   CLIENTES_DELETE: "action.clientes.delete",
@@ -53,6 +54,7 @@ export const PERMISSION_GROUPS = [
       PERMISSIONS.FACTURAS_CREATE,
       PERMISSIONS.FACTURAS_EDIT,
       PERMISSIONS.FACTURAS_CHANGE_STATE,
+      PERMISSIONS.CARTERA_VIEW,
     ],
   },
   {
@@ -84,6 +86,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.MOVIMIENTOS_EDIT,
     PERMISSIONS.MOVIMIENTOS_DELETE,
     PERMISSIONS.FACTURAS_CHANGE_STATE,
+    PERMISSIONS.CARTERA_VIEW,
   ],
 };
 

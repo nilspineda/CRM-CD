@@ -70,6 +70,9 @@ const sanitizeFacturaPayload = (factura = {}) => {
     fecha_pago: factura.fecha_pago ?? null,
     valor_total:
       factura.valor_total == null ? null : Number(factura.valor_total) || 0,
+    valor_pagado:
+      factura.valor_pagado == null ? null : Number(factura.valor_pagado) || 0,
+    fecha_proximo_pago: factura.fecha_proximo_pago ?? null,
     estado: factura.estado ?? null,
     observaciones: factura.observaciones ?? null,
     cuenta_id: factura.cuenta_id ?? null,
@@ -161,11 +164,15 @@ export const facturasService = {
     }
     if (
       anterior.estado === "pagado" &&
-      actualizado.estado === "pagado" &&
-      anterior.cuenta_id !== actualizado.cuenta_id
+      actualizado.estado === "pagado"
     ) {
-      await ajustarCuenta(anterior.cuenta_id, -(anterior.valor_total || 0));
-      await ajustarCuenta(actualizado.cuenta_id, actualizado.valor_total || 0);
+      if (anterior.cuenta_id !== actualizado.cuenta_id) {
+        await ajustarCuenta(anterior.cuenta_id, -(anterior.valor_total || 0));
+        await ajustarCuenta(actualizado.cuenta_id, actualizado.valor_total || 0);
+      } else if (anterior.valor_total !== actualizado.valor_total) {
+        const diff = (actualizado.valor_total || 0) - (anterior.valor_total || 0);
+        await ajustarCuenta(actualizado.cuenta_id, diff);
+      }
     }
 
     return agregarCamposDerivados(actualizado);
@@ -175,9 +182,11 @@ export const facturasService = {
     const factura = await this.getById(id);
     const payload = {
       estado: datos.estado,
-      fecha_pago: datos.fecha_pago || factura.fecha_pago || null,
-      observaciones: datos.observaciones ?? factura.observaciones ?? null,
-      cuenta_id: datos.cuenta_id || factura.cuenta_id || null,
+      fecha_pago: datos.fecha_pago !== undefined ? datos.fecha_pago : factura.fecha_pago,
+      fecha_proximo_pago: datos.fecha_proximo_pago !== undefined ? datos.fecha_proximo_pago : factura.fecha_proximo_pago,
+      valor_pagado: datos.valor_pagado !== undefined ? datos.valor_pagado : factura.valor_pagado,
+      observaciones: datos.observaciones !== undefined ? datos.observaciones : factura.observaciones,
+      cuenta_id: datos.cuenta_id !== undefined ? datos.cuenta_id : factura.cuenta_id,
       updated_at: new Date().toISOString(),
     };
 

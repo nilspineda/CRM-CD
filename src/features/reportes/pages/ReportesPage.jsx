@@ -37,8 +37,8 @@ import { exportToExcel } from "../../../lib/exportExcel";
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white p-3 border border-slate-200 shadow-md rounded-lg">
-        <p className="font-semibold text-slate-800 mb-2 capitalize">{label}</p>
+      <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg">
+        <p className="font-semibold text-slate-800 dark:text-slate-100 mb-2 capitalize">{label}</p>
         {payload.map((entry, index) => (
           <p
             key={index}
@@ -146,7 +146,6 @@ export default function ReportesPage() {
     return Object.values(dataByMonth);
   }, [movimientos]);
 
-  const utilidad = reporte.ingresos - reporte.egresos - reporte.valor125;
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -165,12 +164,6 @@ export default function ReportesPage() {
         seccion: "Indicadores",
         concepto: "Egresos",
         valor: reporte.egresos,
-        participacion: "",
-      },
-      {
-        seccion: "Indicadores",
-        concepto: "Utilidad",
-        valor: utilidad,
         participacion: "",
       },
       {
@@ -222,10 +215,10 @@ export default function ReportesPage() {
     <div className="space-y-4 sm:space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
             Reportes
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             Indicadores financieros calculados desde Supabase
           </p>
         </div>
@@ -254,12 +247,6 @@ export default function ReportesPage() {
           tone="red"
         />
         <StatCard
-          icon={DollarSign}
-          label="Utilidad"
-          value={formatCurrency(utilidad)}
-          tone={utilidad >= 0 ? "blue" : "red"}
-        />
-        <StatCard
           icon={BarChart3}
           label="Movimientos"
           value={movimientos.length}
@@ -281,14 +268,14 @@ export default function ReportesPage() {
               type="date"
               value={filtros.fechaInicio}
               onChange={handleFilterChange}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 dark:text-slate-100"
             />
             <input
               name="fechaFin"
               type="date"
               value={filtros.fechaFin}
               onChange={handleFilterChange}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
         </CardContent>
@@ -296,7 +283,7 @@ export default function ReportesPage() {
 
       {loading ? (
         <Card>
-          <CardContent className="text-center text-slate-500 py-12">
+          <CardContent className="text-center text-slate-500 dark:text-slate-400 py-12">
             Cargando reportes...
           </CardContent>
         </Card>
@@ -390,40 +377,40 @@ function ResumenTable({ title, data, labelFormatter = (value) => value }) {
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <div className="overflow-x-auto mobile-card-table">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50 hidden sm:table-header-group">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                 Concepto
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                 Valor
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                 Participacion
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={3}
-                  className="px-4 py-12 text-center text-slate-500"
+                  className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                 >
                   Sin datos en el periodo
                 </td>
               </tr>
             ) : (
               rows.map(([label, value]) => (
-                <tr key={label} className="hover:bg-slate-50">
-                  <td className="px-3 sm:px-4 py-3 font-medium text-slate-800">
+                <tr key={label} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                  <td className="px-3 sm:px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
                     {labelFormatter(label)}
                   </td>
-                  <td className="px-3 sm:px-4 py-3 sm:text-right text-slate-800">
+                  <td className="px-3 sm:px-4 py-3 sm:text-right text-slate-800 dark:text-slate-100">
                     {formatCurrency(value)}
                   </td>
-                  <td className="px-3 sm:px-4 py-3 sm:text-right text-slate-600">
+                  <td className="px-3 sm:px-4 py-3 sm:text-right text-slate-600 dark:text-slate-400">
                     {total ? Math.round((value / total) * 100) : 0}%
                   </td>
                 </tr>
@@ -438,11 +425,11 @@ function ResumenTable({ title, data, labelFormatter = (value) => value }) {
 
 function StatCard({ icon: Icon, label, value, tone }) {
   const tones = {
-    green: "bg-green-100 text-green-600",
-    red: "bg-red-100 text-red-600",
-    blue: "bg-blue-100 text-blue-600",
-    slate: "bg-slate-100 text-slate-600",
-    amber: "bg-amber-100 text-amber-600",
+    green: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+    red: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
+    blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+    slate: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400",
+    amber: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
   };
 
   return (
@@ -452,8 +439,8 @@ function StatCard({ icon: Icon, label, value, tone }) {
           <Icon size={20} />
         </div>
         <div className="min-w-0">
-          <p className="text-xs sm:text-sm text-slate-600">{label}</p>
-          <p className="text-base sm:text-xl font-bold text-slate-800 truncate">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{label}</p>
+          <p className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
             {value}
           </p>
         </div>

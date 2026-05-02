@@ -1,5 +1,5 @@
 // filepath: src/features/dashboard/pages/DashboardHome.jsx
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   TrendingUp,
@@ -59,7 +59,6 @@ const buildMonthlyChart = (movimientos) => {
       }),
       Ingresos: 0,
       Gastos: 0,
-      Utilidad: 0,
     };
   });
 
@@ -79,10 +78,7 @@ const buildMonthlyChart = (movimientos) => {
       }
     });
 
-  return months.map((item) => ({
-    ...item,
-    Utilidad: item.Ingresos - item.Gastos,
-  }));
+  return months;
 };
 
 const buildAccountsChart = (cuentas) =>
@@ -115,8 +111,26 @@ const DashboardTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardHome() {
-  const mesActual = getDateRange("month");
-  const anioActual = getDateRange("year");
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().toISOString().slice(0, 7)
+  );
+
+  const getMonthRange = (monthStr) => {
+    const [year, month] = monthStr.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    return { start, end };
+  };
+
+  const getYearRange = (monthStr) => {
+    const year = Number(monthStr.split("-")[0]);
+    const start = new Date(Date.UTC(year, 0, 1));
+    const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
+    return { start, end };
+  };
+
+  const mesResumen = getMonthRange(selectedMonth);
+  const anioResumen = getYearRange(selectedMonth);
 
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
     queryKey: ["cuentas", "activas"],
@@ -125,28 +139,42 @@ export default function DashboardHome() {
 
   const { data: movimientosData = [], isLoading: movimientosLoading } =
     useQuery({
-      queryKey: ["movimientos", anioActual],
+      queryKey: ["movimientos", anioResumen],
       queryFn: () =>
         movimientosService.getAll({
-          fechaInicio: anioActual.start.toISOString().split("T")[0],
-          fechaFin: anioActual.end.toISOString().split("T")[0],
+          fechaInicio: anioResumen.start.toISOString().split("T")[0],
+          fechaFin: anioResumen.end.toISOString().split("T")[0],
           ordenarPor: "fecha_desc",
         }),
     });
 
   const {
-    data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0 },
+    data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0, valor125: 0 },
     isLoading: statsLoading,
   } = useQuery({
-    queryKey: ["movimientos", "stats", mesActual],
+    queryKey: ["movimientos", "stats", mesResumen],
     queryFn: () =>
       movimientosService.getEstadisticas(
-        mesActual.start.toISOString().split("T")[0],
-        mesActual.end.toISOString().split("T")[0],
+        mesResumen.start.toISOString().split("T")[0],
+        mesResumen.end.toISOString().split("T")[0],
       ),
   });
 
-  const loading = cuentasLoading || movimientosLoading || statsLoading;
+  const { data: facturasData = [], isLoading: facturasLoading } = useQuery({
+    queryKey: ["facturas", "anio", anioResumen],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("facturas")
+        .select("fecha_creacion, valor_total, estado")
+        .gte("fecha_creacion", anioResumen.start.toISOString().split("T")[0])
+        .lte("fecha_creacion", anioResumen.end.toISOString().split("T")[0])
+        .eq("estado", "pagado");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const loading = cuentasLoading || movimientosLoading || statsLoading || facturasLoading;
 
   const movimientosRecientes = useMemo(
     () => movimientosData.slice(0, 6),
@@ -163,15 +191,18 @@ export default function DashboardHome() {
     [statsData, saldoTotal],
   );
 
-  const utilidad = useMemo(
-    () => stats.ingresos - stats.egresos,
-    [stats.ingresos, stats.egresos],
-  );
-
-  const monthlyChartData = useMemo(
-    () => buildMonthlyChart(movimientosData),
-    [movimientosData],
-  );
+  const monthlyChartData = useMemo(() => {
+    const months = buildMonthlyChart(movimientosData);
+    const year = Number(selectedMonth.split("-")[0]);
+    [...(facturasData || [])].forEach((f) => {
+      const date = new Date(`${f.fecha_creacion}T00:00:00`);
+      if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
+      const monthIndex = date.getMonth();
+      const valor = Math.abs(f.valor_total || 0);
+      months[monthIndex].Ingresos += valor;
+    });
+    return months;
+  }, [movimientosData, facturasData]);
 
   const accountsChartData = useMemo(
     () => buildAccountsChart(cuentasData),
@@ -191,12 +222,6 @@ export default function DashboardHome() {
         concepto: "Egresos del mes",
         detalle: "",
         valor: stats.egresos,
-      },
-      {
-        seccion: "Indicadores",
-        concepto: "Utilidad del mes",
-        detalle: "",
-        valor: utilidad,
       },
       {
         seccion: "Indicadores",
@@ -254,17 +279,25 @@ export default function DashboardHome() {
             Dashboard
           </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
-            Resumen financiero del mes en curso
+            Resumen financiero
           </p>
         </div>
-        <Button variant="outline" onClick={handleExport} className="shrink-0">
-          <Download size={16} className="mr-1 sm:mr-2" />
-          Excel
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-2 w-full sm:w-auto text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+          />
+          <Button variant="outline" onClick={handleExport} className="shrink-0 w-full sm:w-auto">
+            <Download size={16} className="mr-1 sm:mr-2" />
+            Excel
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
             <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
@@ -298,33 +331,6 @@ export default function DashboardHome() {
               </p>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
                 Movimientos pagados del mes actual
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full">
-          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div
-              className={`p-2 sm:p-3 rounded-lg shrink-0 ${utilidad >= 0 ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}
-            >
-              {utilidad >= 0 ? (
-                <TrendingUp className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
-              ) : (
-                <TrendingDown className="text-red-600 dark:text-red-400 w-5 h-5 sm:w-6 sm:h-6" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                Utilidad del mes
-              </p>
-              <p
-                className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${utilidad >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-              >
-                {formatCurrency(utilidad)}
-              </p>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
-                Ingresos menos gastos del mes actual
               </p>
             </div>
           </CardContent>
@@ -380,7 +386,7 @@ export default function DashboardHome() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">
-              Ingresos, gastos y utilidad por mes
+              Ingresos y gastos por mes
             </CardTitle>
           </CardHeader>
           <CardContent className="h-80 sm:h-96">
@@ -405,11 +411,6 @@ export default function DashboardHome() {
                     radius={[6, 6, 0, 0]}
                   />
                   <Bar dataKey="Egresos" fill="#dc2626" radius={[6, 6, 0, 0]} />
-                  <Bar
-                    dataKey="Utilidad"
-                    fill="#d97706"
-                    radius={[6, 6, 0, 0]}
-                  />
                 </BarChart>
               </ResponsiveContainer>
             )}

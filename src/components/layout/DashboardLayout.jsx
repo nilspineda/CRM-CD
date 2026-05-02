@@ -57,11 +57,11 @@ const navItems = [
     description: "Facturacion",
   },
   {
-    moduleKey: "iva",
-    path: "/iva",
-    icon: FileText,
-    label: "IVA",
-    description: "Control de IVA",
+    moduleKey: "cartera",
+    path: "/cartera",
+    icon: Receipt, // We can use another icon like AlertCircle or Wallet
+    label: "Cartera",
+    description: "Cuentas por cobrar",
   },
   {
     moduleKey: "reportes",

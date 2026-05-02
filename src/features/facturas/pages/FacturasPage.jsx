@@ -8,6 +8,7 @@ import {
   Receipt,
   Search,
   Wallet,
+  Clock,
 } from "lucide-react";
 import Card, { CardContent } from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
@@ -64,6 +65,8 @@ const emptyEstadoForm = {
   fecha_pago: formatDateInput(new Date()),
   cuenta_id: "",
   observaciones: "",
+  valor_pagado: "",
+  fecha_proximo_pago: "",
 };
 
 export default function FacturasPage() {
@@ -193,7 +196,7 @@ export default function FacturasPage() {
   }, [cuentasData]);
 
   const facturasEnriquecidas = useMemo(() => {
-    return (facturasData || []).map((factura) => {
+    let result = (facturasData || []).map((factura) => {
       const cliente = clientesMap.get(factura.cliente_nit);
       const cuenta = cuentasMap.get(factura.cuenta_id);
       return {
@@ -202,7 +205,35 @@ export default function FacturasPage() {
         cuenta_nombre: cuenta?.nombre || factura.cuenta_nombre || "",
       };
     });
-  }, [facturasData, clientesMap, cuentasMap]);
+
+    if (filtros.busqueda) {
+      const term = filtros.busqueda.toLowerCase();
+      result = result.filter(
+        (f) =>
+          String(f.numero_factura).toLowerCase().includes(term) ||
+          String(f.cliente_nombre).toLowerCase().includes(term) ||
+          String(f.cliente_nit).toLowerCase().includes(term) ||
+          String(f.cuenta_nombre).toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [facturasData, clientesMap, cuentasMap, filtros.busqueda]);
+
+  const statsFacturacion = useMemo(() => {
+    let total = 0;
+    let pagado = 0;
+    let pendiente = 0;
+
+    facturasEnriquecidas.forEach((f) => {
+      const val = Number(f.valor_total) || 0;
+      total += val;
+      if (f.estado === "pagado") pagado += val;
+      else pendiente += val;
+    });
+
+    return { total, pagado, pendiente };
+  }, [facturasEnriquecidas]);
 
   const totalPages = Math.ceil(facturasEnriquecidas.length / PAGE_SIZE);
   const facturasPaginadas = useMemo(() => {
@@ -304,6 +335,8 @@ export default function FacturasPage() {
       fecha_pago: formatDateInput(factura.fecha_pago || new Date()),
       cuenta_id: factura.cuenta_id || "",
       observaciones: factura.observaciones || "",
+      valor_pagado: factura.valor_pagado || "",
+      fecha_proximo_pago: formatDateInput(factura.fecha_proximo_pago || ""),
     });
     setEstadoModalOpen(true);
   };
@@ -325,16 +358,26 @@ export default function FacturasPage() {
       const esElectronica = selectedFactura.prefijo === "FE";
 
       let cuentaId = selectedFactura.cuenta_id || null;
+      let valorPagado = null;
+      let fechaProximoPago = null;
 
-      if (esPagado && esRemision) {
+      if (!esPagado) {
+        cuentaId = null;
+        if (estadoForm.estado === "pago_parcial") {
+          valorPagado = Number(estadoForm.valor_pagado) || 0;
+          fechaProximoPago = estadoForm.fecha_proximo_pago || null;
+          if (esRemision || esElectronica) {
+              if (esRemision && estadoForm.cuenta_id) cuentaId = estadoForm.cuenta_id;
+              if (esElectronica && cuentaBancolombia?.id) cuentaId = cuentaBancolombia.id;
+          }
+        }
+      } else if (esRemision) {
         if (!estadoForm.cuenta_id) {
           alert("Selecciona la cuenta para cargar el dinero de la remisión.");
           return;
         }
         cuentaId = estadoForm.cuenta_id;
-      }
-
-      if (esPagado && esElectronica) {
+      } else if (esElectronica) {
         if (!cuentaBancolombia?.id) {
           alert(
             `No se encontró la cuenta ${CUENTA_BANCOLOMBIA_OBJETIVO}. Crea o renombra esa cuenta para continuar.`,
@@ -348,6 +391,8 @@ export default function FacturasPage() {
         ...selectedFactura,
         ...estadoForm,
         cuenta_id: cuentaId,
+        valor_pagado: valorPagado,
+        fecha_proximo_pago: fechaProximoPago,
         valor_total: selectedFactura.valor_total,
       };
       await actualizarMutate.mutateAsync({
@@ -464,6 +509,49 @@ export default function FacturasPage() {
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+              <Receipt className="text-blue-600 dark:text-blue-400 w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total facturado del mes</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+                {formatCurrency(statsFacturacion.total)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
+              <CheckCircle2 className="text-green-600 dark:text-green-400 w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total cobrado (Pagado)</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+                {formatCurrency(statsFacturacion.pagado)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
+              <Clock className="text-amber-600 dark:text-amber-400 w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total pendiente (Cartera)</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+                {formatCurrency(statsFacturacion.pendiente)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="w-full">
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
@@ -536,6 +624,9 @@ export default function FacturasPage() {
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   IVA
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Cuenta
+                </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Valor
                 </th>
@@ -551,7 +642,7 @@ export default function FacturasPage() {
               {isLoading || clientesLoading || cuentasLoading ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     Cargando...
@@ -560,7 +651,7 @@ export default function FacturasPage() {
               ) : facturasPaginadas.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay facturas para mostrar
@@ -594,6 +685,9 @@ export default function FacturasPage() {
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.iva)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-left">
+                        {factura.cuenta_nombre || <span className="text-slate-400 dark:text-slate-500 italic">No asignada</span>}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(factura.valor_total)}
@@ -822,6 +916,9 @@ export default function FacturasPage() {
             rows={3}
           />
           <div className="flex justify-end gap-3 pt-2">
+            {errors.submit && (
+              <p className="text-sm text-red-500 self-center">{errors.submit}</p>
+            )}
             <Button type="button" variant="outline" onClick={closeFacturaModal}>
               Cancelar
             </Button>
@@ -860,24 +957,49 @@ export default function FacturasPage() {
               setEstadoForm((prev) => ({ ...prev, fecha_pago: e.target.value }))
             }
           />
-          {selectedFactura?.prefijo === "RM" && estadoForm.estado === "pagado" && (
-            <Select
-              label="Cuenta a cargar"
-              value={estadoForm.cuenta_id}
-              onChange={(e) =>
-                setEstadoForm((prev) => ({ ...prev, cuenta_id: e.target.value }))
-              }
-              required
-            >
-              <option value="">Seleccionar cuenta</option>
-              {cuentasData.map((cuenta) => (
-                <option key={cuenta.id} value={cuenta.id}>
-                  {cuenta.nombre}
-                </option>
-              ))}
-            </Select>
+          {estadoForm.estado === "pago_parcial" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Valor Abonado"
+                type="number"
+                value={estadoForm.valor_pagado}
+                onChange={(e) =>
+                  setEstadoForm((prev) => ({ ...prev, valor_pagado: e.target.value }))
+                }
+              />
+              <Input
+                label="Fecha Próximo Pago"
+                type="date"
+                value={estadoForm.fecha_proximo_pago}
+                onChange={(e) =>
+                  setEstadoForm((prev) => ({ ...prev, fecha_proximo_pago: e.target.value }))
+                }
+              />
+            </div>
           )}
-          {selectedFactura?.prefijo === "FE" && estadoForm.estado === "pagado" && (
+          {selectedFactura?.prefijo === "RM" && (estadoForm.estado === "pagado" || estadoForm.estado === "pago_parcial") && (
+            <div>
+              <Select
+                label="Cuenta a cargar"
+                value={estadoForm.cuenta_id}
+                onChange={(e) =>
+                  setEstadoForm((prev) => ({ ...prev, cuenta_id: e.target.value }))
+                }
+                required
+              >
+                <option value="">Seleccionar cuenta</option>
+                {cuentasData.map((cuenta) => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.nombre}
+                  </option>
+                ))}
+              </Select>
+              {errors.cuenta_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.cuenta_id}</p>
+              )}
+            </div>
+          )}
+          {selectedFactura?.prefijo === "FE" && (estadoForm.estado === "pagado" || estadoForm.estado === "pago_parcial") && (
             <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
               Factura electrónica: el dinero se cargará automáticamente a{" "}
               <strong>
@@ -906,6 +1028,9 @@ export default function FacturasPage() {
             rows={2}
           />
           <div className="flex justify-end gap-3 pt-2">
+            {errors.submit && (
+              <p className="text-sm text-red-500 self-center">{errors.submit}</p>
+            )}
             <Button type="button" variant="outline" onClick={closeEstadoModal}>
               Cancelar
             </Button>

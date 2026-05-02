@@ -377,7 +377,7 @@ export const movimientosService = {
   },
 
   async getReporteFinanciero(fechaInicio, fechaFin) {
-    const { data, error } = await supabase
+    const { data: movs, error: errorMovs } = await supabase
       .from("movimientos_financieros")
       .select(
         `
@@ -399,7 +399,46 @@ export const movimientosService = {
       .neq("estado", "anulado")
       .order("fecha", { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (errorMovs) throw errorMovs;
+
+    const { data: facts, error: errorFacts } = await supabase
+      .from("facturas")
+      .select(
+        `
+        id,
+        fecha_creacion,
+        prefijo,
+        numero_factura,
+        valor_total,
+        estado,
+        cuenta_id
+      `,
+      )
+      .gte("fecha_creacion", fechaInicio)
+      .lte("fecha_creacion", fechaFin)
+      .neq("estado", "anulado");
+
+    if (errorFacts) throw errorFacts;
+
+    const formattedFacts = facts.map((f) => {
+      const taxes = computeFacturaTaxes(f);
+      return {
+        id: `fact_${f.id}`,
+        fecha: f.fecha_creacion,
+        tipo_movimiento: "factura_venta",
+        descripcion: `Factura ${f.prefijo}-${f.numero_factura}`,
+        valor_base: taxes.base,
+        valor_total: f.valor_total,
+        valor_iva: taxes.iva,
+        incluye_iva: true,
+        porcentaje_iva: 19,
+        estado: f.estado,
+        cuentas_financieras: { nombre: "Cuenta facturas" },
+        prefijo: f.prefijo,
+      };
+    });
+
+    const allData = [...(movs || []), ...(formattedFacts || [])];
+    return allData.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   },
 };

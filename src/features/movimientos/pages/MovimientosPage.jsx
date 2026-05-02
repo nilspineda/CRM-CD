@@ -1,4 +1,4 @@
-﻿// filepath: src/features/movimientos/pages/MovimientosPage.jsx
+// filepath: src/features/movimientos/pages/MovimientosPage.jsx
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -473,25 +473,6 @@ export default function MovimientosPage() {
                   </tr>
                 ))
               )}
-
-              <MovimientoLogsCard
-                logs={logs}
-                loading={logsLoading || isLoading}
-                page={logsPage}
-                totalPages={logsTotalPages}
-                totalCount={logsCount}
-                pageSize={LOGS_PAGE_SIZE}
-                onPageChange={(newPage) => setLogsPage(newPage)}
-                selectedMonth={logsMonth}
-                onMonthChange={(month) => {
-                  setLogsMonth(month);
-                  setLogsPage(1);
-                }}
-                onDownload={handleDownloadLogs}
-                downloading={logsLoading}
-                currentUserLabel={currentUserLabel}
-                title="Logs de movimientos"
-              />
             </tbody>
           </table>
         </div>
@@ -525,12 +506,20 @@ export default function MovimientosPage() {
 
       <MovimientoLogsCard
         logs={logs}
-        loading={logsLoading}
+        loading={logsLoading || isLoading}
         page={logsPage}
         totalPages={logsTotalPages}
         totalCount={logsCount}
         pageSize={LOGS_PAGE_SIZE}
         onPageChange={handleLogsPageChange}
+        selectedMonth={logsMonth}
+        onMonthChange={(month) => {
+          setLogsMonth(month);
+          setLogsPage(1);
+        }}
+        onDownload={handleDownloadLogs}
+        downloading={logsLoading}
+        currentUserLabel={currentUserLabel}
         title="Logs de movimientos"
       />
 
