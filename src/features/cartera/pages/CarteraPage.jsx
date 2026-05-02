@@ -4,14 +4,31 @@ import { Search, MessageCircle, Wallet, AlertCircle } from "lucide-react";
 import Card, { CardContent } from "../../../components/ui/Card";
 import { facturasService } from "../../facturas/services/facturasService";
 import { clientesService } from "../../clientes/services/clientesService";
-import { formatCurrency, formatDate } from "../../../lib/formatters";
+import { formatCurrency, formatDate, getDateRange } from "../../../lib/utils";
 
 export default function CarteraPage() {
   const [query, setQuery] = useState("");
+  const [mesResumen, setMesResumen] = useState("");
+
+  const getMonthRange = (value) => {
+    if (!value) return getDateRange("month");
+    const [year, month] = value.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    return { start, end };
+  };
 
   const { data: facturasData = [], isLoading: facturasLoading } = useQuery({
-    queryKey: ["facturas", "cartera"],
-    queryFn: () => facturasService.getAll({ estado: "cartera" }),
+    queryKey: ["facturas", "cartera", mesResumen],
+    queryFn: () => {
+      let filtros = { estado: "cartera" };
+      if (mesResumen) {
+        const monthRange = getMonthRange(mesResumen);
+        filtros.fechaInicio = monthRange.start.toISOString().split("T")[0];
+        filtros.fechaFin = monthRange.end.toISOString().split("T")[0];
+      }
+      return facturasService.getAll(filtros);
+    },
   });
 
   const { data: clientesData = [], isLoading: clientesLoading } = useQuery({
@@ -65,6 +82,14 @@ export default function CarteraPage() {
         fecha_objetivo: fechaObjetivo
       };
     });
+
+    // Filtro a prueba de fallos: asegurarse de que no haya pagadas ni anuladas, y que haya valor pendiente
+    result = result.filter(
+      (f) =>
+        f.estado !== "pagado" &&
+        f.estado !== "anulado" &&
+        f.valor_pendiente > 0
+    );
 
     if (query) {
       const text = query.toLowerCase();
@@ -121,6 +146,25 @@ export default function CarteraPage() {
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             Gestión de facturas pendientes y cobros
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Mes:
+          </label>
+          <input
+            type="month"
+            value={mesResumen}
+            onChange={(e) => setMesResumen(e.target.value)}
+            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+          />
+          {mesResumen && (
+            <button
+              onClick={() => setMesResumen("")}
+              className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
+            >
+              Ver todo
+            </button>
+          )}
         </div>
       </div>
 
