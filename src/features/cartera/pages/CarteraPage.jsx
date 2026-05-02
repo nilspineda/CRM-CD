@@ -56,11 +56,12 @@ export default function CarteraPage() {
 
     let result = facturasData.map((factura) => {
       const cliente = clientesMap.get(factura.cliente_nit);
-      
-      let fechaObjetivo = factura.estado === "pago_parcial" 
-        ? factura.fecha_proximo_pago 
-        : factura.fecha_pago;
-        
+
+      let fechaObjetivo =
+        factura.estado === "pago_parcial"
+          ? factura.fecha_proximo_pago
+          : factura.fecha_pago;
+
       if (!fechaObjetivo) {
         // Fallback si no hay fecha definida
         fechaObjetivo = factura.fecha_pago || factura.fecha_creacion;
@@ -69,16 +70,18 @@ export default function CarteraPage() {
       const fechaObjDate = new Date(fechaObjetivo + "T00:00:00");
       let diasRestantes = null;
       let vencida = false;
-      
+
       if (!Number.isNaN(fechaObjDate.getTime())) {
         const diffTime = fechaObjDate.getTime() - hoy.getTime();
         diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diasRestantes < 0) vencida = true;
       }
 
-      const valorPendiente = factura.estado === "pago_parcial"
-        ? (Number(factura.valor_total) || 0) - (Number(factura.valor_pagado) || 0)
-        : Number(factura.valor_total) || 0;
+      const valorPendiente =
+        factura.estado === "pago_parcial"
+          ? (Number(factura.valor_total) || 0) -
+            (Number(factura.valor_pagado) || 0)
+          : Number(factura.valor_total) || 0;
 
       return {
         ...factura,
@@ -87,8 +90,11 @@ export default function CarteraPage() {
         dias_restantes: diasRestantes,
         vencida,
         valor_pendiente: valorPendiente,
-        valor_abonado: factura.estado === "pago_parcial" ? (Number(factura.valor_pagado) || 0) : 0,
-        fecha_objetivo: fechaObjetivo
+        valor_abonado:
+          factura.estado === "pago_parcial"
+            ? Number(factura.valor_pagado) || 0
+            : 0,
+        fecha_objetivo: fechaObjetivo,
       };
     });
 
@@ -97,7 +103,7 @@ export default function CarteraPage() {
       (f) =>
         f.estado !== "pagado" &&
         f.estado !== "anulado" &&
-        f.valor_pendiente > 0
+        f.valor_pendiente > 0,
     );
 
     if (query) {
@@ -106,7 +112,7 @@ export default function CarteraPage() {
         (f) =>
           String(f.numero_factura).toLowerCase().includes(text) ||
           String(f.cliente_nombre).toLowerCase().includes(text) ||
-          String(f.cliente_nit).toLowerCase().includes(text)
+          String(f.cliente_nit).toLowerCase().includes(text),
       );
     }
 
@@ -122,24 +128,28 @@ export default function CarteraPage() {
   }, [facturasData, clientesMap, query]);
 
   const totalCartera = useMemo(() => {
-    return carteraEnriquecida.reduce((sum, item) => sum + item.valor_pendiente, 0);
+    return carteraEnriquecida.reduce(
+      (sum, item) => sum + item.valor_pendiente,
+      0,
+    );
   }, [carteraEnriquecida]);
 
   const getWhatsAppUrl = (factura) => {
     if (!factura.telefono) return null;
-    
+
     const digits = String(factura.telefono).replace(/\D/g, "");
     if (!digits) return null;
-    
-    const normalized = digits.length === 10 && !digits.startsWith("57") ? `57${digits}` : digits;
-    
+
+    const normalized =
+      digits.length === 10 && !digits.startsWith("57") ? `57${digits}` : digits;
+
     const numero = `${factura.prefijo}-${factura.numero_factura}`;
-    const diasText = factura.vencida 
-      ? `tiene ${Math.abs(factura.dias_restantes)} días de vencimiento`
+    const diasText = factura.vencida
+      ? `tiene <b>${Math.abs(factura.dias_restantes)} días</b> de vencimiento`
       : `vence en ${factura.dias_restantes} días`;
-      
+
     const text = `Hola, te recordamos que tienes un compromiso de pago de la factura ${numero} pendiente por valor de ${formatCurrency(factura.valor_pendiente)}. La factura ${diasText}.`;
-    
+
     return `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`;
   };
 
@@ -195,7 +205,9 @@ export default function CarteraPage() {
               <Wallet className="text-amber-600 dark:text-amber-400 w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total en Cartera</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Total en Cartera
+              </p>
               <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(totalCartera)}
               </p>
@@ -207,7 +219,10 @@ export default function CarteraPage() {
       <Card>
         <CardContent>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={16}
+            />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -223,29 +238,56 @@ export default function CarteraPage() {
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Factura</th>
-                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Cliente</th>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Próximo Pago</th>
-                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Días</th>
-                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Abonado</th>
-                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Pendiente</th>
-                <th className="w-[17%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Acción</th>
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Factura
+                </th>
+                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Cliente
+                </th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Próximo Pago
+                </th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Días
+                </th>
+                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Abonado
+                </th>
+                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Pendiente
+                </th>
+                <th className="w-[17%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">Cargando cartera...</td>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Cargando cartera...
+                  </td>
                 </tr>
               ) : carteraEnriquecida.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">No hay facturas pendientes en cartera</td>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    No hay facturas pendientes en cartera
+                  </td>
                 </tr>
               ) : (
                 carteraEnriquecida.map((factura) => {
                   const wsUrl = getWhatsAppUrl(factura);
                   return (
-                    <tr key={factura.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <tr
+                      key={factura.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700"
+                    >
                       <td className="px-3 sm:px-4 py-3 text-sm font-medium">
                         <div className="flex items-center gap-2">
                           {/* Número clickeable → abre resumen */}
@@ -268,7 +310,20 @@ export default function CarteraPage() {
                             className="p-1 text-slate-400 hover:text-amber-500 transition-colors"
                             title="Editar factura"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="13"
+                              height="13"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
                           </button>
                         </div>
                         {factura.estado === "pago_parcial" && (
@@ -278,18 +333,26 @@ export default function CarteraPage() {
                         )}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                        <div className="font-medium truncate">{factura.cliente_nombre}</div>
-                        <div className="text-xs text-slate-500 truncate">{factura.cliente_nit}</div>
+                        <div className="font-medium truncate">
+                          {factura.cliente_nombre}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {factura.cliente_nit}
+                        </div>
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                         {factura.fecha_objetivo ? (
                           <div>
                             <div>{formatDate(factura.fecha_objetivo)}</div>
                             {factura.estado === "pago_parcial" && (
-                              <div className="text-xs text-amber-500 dark:text-amber-400 mt-0.5">próximo pago</div>
+                              <div className="text-xs text-amber-500 dark:text-amber-400 mt-0.5">
+                                próximo pago
+                              </div>
                             )}
                           </div>
-                        ) : <span className="text-slate-400">—</span>}
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-center">
                         {factura.dias_restantes === null ? (
@@ -334,10 +397,14 @@ export default function CarteraPage() {
                               title="Enviar recordatorio por WhatsApp"
                             >
                               <MessageCircle size={16} />
-                              <span className="hidden sm:inline">Recordatorio</span>
+                              <span className="hidden sm:inline">
+                                Recordatorio
+                              </span>
                             </a>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">Sin teléfono</span>
+                            <span className="text-xs text-slate-400 italic">
+                              Sin teléfono
+                            </span>
                           )}
                           <Button
                             size="sm"
@@ -360,7 +427,7 @@ export default function CarteraPage() {
           </table>
         </div>
       </Card>
-      
+
       <CambiarEstadoModal
         isOpen={estadoModalOpen}
         onClose={() => {
