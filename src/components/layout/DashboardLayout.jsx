@@ -19,6 +19,8 @@ import { useState } from "react";
 import Button from "../ui/Button";
 import { useAuth } from "../../features/auth/AuthProvider";
 import { canAccessModule } from "../../features/auth/permissions";
+import OfflineIndicator from "../ui/OfflineIndicator";
+import InstallPrompt from "../ui/InstallPrompt";
 
 const navItems = [
   {
@@ -233,6 +235,9 @@ export default function DashboardLayout() {
         <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 w-full min-w-0">
           <Outlet />
         </main>
+
+        <OfflineIndicator />
+        <InstallPrompt />
 
         <footer className="border-t border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-400">
           Elaborado por{" "}
