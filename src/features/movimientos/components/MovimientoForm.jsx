@@ -4,7 +4,7 @@ import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../services/movimientosService";
 import { getTipoMovimientoLabel, isIngreso } from "../../../lib/utils";
-import { TIPOS_MOVIMIENTO_BANCARIOS, CATEGORY_ORDER } from "../constants";
+import { TIPOS_MOVIMIENTO_EGRESOS, CATEGORY_ORDER_EGRESOS } from "../constants";
 
 const ESTADOS = [
   { value: "pendiente", label: "Pendiente" },
@@ -12,7 +12,7 @@ const ESTADOS = [
 ];
 
 const tiposPorCategoria = {};
-TIPOS_MOVIMIENTO_BANCARIOS.forEach((tipo) => {
+TIPOS_MOVIMIENTO_EGRESOS.forEach((tipo) => {
   if (!tiposPorCategoria[tipo.category]) {
     tiposPorCategoria[tipo.category] = [];
   }
@@ -35,7 +35,6 @@ export default function MovimientoForm({
     cuenta_id: initialData.cuenta_id || "",
     valor_total: initialData.valor_total || 0,
     estado: initialData.estado || "pendiente",
-    descripcion: initialData.descripcion || "",
     observaciones: initialData.observaciones || "",
   });
 
@@ -52,7 +51,6 @@ export default function MovimientoForm({
         cuenta_id: movimiento.cuenta_id || "",
         valor_total: movimiento.valor_total || 0,
         estado: movimiento.estado || "pendiente",
-        descripcion: movimiento.descripcion || "",
         observaciones: movimiento.observaciones || "",
       });
     }
@@ -73,7 +71,7 @@ export default function MovimientoForm({
       setTiposMovimiento(data || []);
     } catch (error) {
       console.error("Error cargando tipos de movimiento:", error);
-      setTiposMovimiento(TIPOS_MOVIMIENTO_BANCARIOS.map((t) => t.value));
+      setTiposMovimiento(TIPOS_MOVIMIENTO_EGRESOS.map((t) => t.value));
     }
   };
 
@@ -98,9 +96,6 @@ export default function MovimientoForm({
     if (!formData.tipo_movimiento)
       newErrors.tipo_movimiento = "El tipo es requerido";
     if (!formData.cuenta_id) newErrors.cuenta_id = "La cuenta es requerida";
-    if (!formData.descripcion?.trim()) {
-      newErrors.descripcion = "La descripcion es requerida";
-    }
     if (!formData.valor_total || Number(formData.valor_total) <= 0) {
       newErrors.valor_total = "El valor debe ser mayor a 0";
     }
@@ -133,9 +128,7 @@ export default function MovimientoForm({
     formData.estado === "pagado" ? (esIngreso ? valor : -valor) : 0;
   const saldoDespues = saldoActualCuenta + impacto;
 
-  const tiposConocidos = new Set(
-    TIPOS_MOVIMIENTO_BANCARIOS.map((t) => t.value),
-  );
+  const tiposConocidos = new Set(TIPOS_MOVIMIENTO_EGRESOS.map((t) => t.value));
   const tiposExtras = tiposMovimiento.filter((t) => !tiposConocidos.has(t));
 
   return (
@@ -159,7 +152,7 @@ export default function MovimientoForm({
           error={errors.tipo_movimiento}
           required
         >
-          {CATEGORY_ORDER.map((categoria) => {
+          {CATEGORY_ORDER_EGRESOS.map((categoria) => {
             const tipos = tiposPorCategoria[categoria];
             if (!tipos) return null;
             return (
@@ -229,16 +222,6 @@ export default function MovimientoForm({
           ))}
         </Select>
       </div>
-
-      <Input
-        label="Descripción"
-        name="descripcion"
-        value={formData.descripcion}
-        onChange={handleChange}
-        error={errors.descripcion}
-        placeholder="Descripción del movimiento"
-        required
-      />
 
       {cuentaSeleccionada && formData.estado === "pagado" && (
         <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
