@@ -162,7 +162,13 @@ export default function DashboardHome() {
     });
 
   const {
-    data: statsData = { ingresos: 0, egresos: 0, iva: 0, facturas: 0, valor125: 0 },
+    data: statsData = {
+      ingresos: 0,
+      egresos: 0,
+      iva: 0,
+      facturas: 0,
+      valor125: 0,
+    },
     isLoading: statsLoading,
   } = useQuery({
     queryKey: ["movimientos", "stats", mesResumen],
@@ -187,7 +193,8 @@ export default function DashboardHome() {
     },
   });
 
-  const loading = cuentasLoading || movimientosLoading || statsLoading || facturasLoading;
+  const loading =
+    cuentasLoading || movimientosLoading || statsLoading || facturasLoading;
 
   const movimientosRecientes = useMemo(
     () => movimientosData.slice(0, 6),
@@ -208,7 +215,7 @@ export default function DashboardHome() {
     const months = buildMonthlyChart(movimientosData);
     if (selectedMonth) {
       const year = Number(selectedMonth.split("-")[0]);
-      ;[...(facturasData || [])].forEach((f) => {
+      [...(facturasData || [])].forEach((f) => {
         const date = new Date(`${f.fecha_creacion}T00:00:00`);
         if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
         const monthIndex = date.getMonth();
@@ -279,7 +286,9 @@ export default function DashboardHome() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500 dark:text-slate-400">Cargando dashboard...</div>
+        <div className="text-slate-500 dark:text-slate-400">
+          Cargando dashboard...
+        </div>
       </div>
     );
   }
@@ -293,10 +302,11 @@ export default function DashboardHome() {
             Dashboard
           </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
-            Resumen financiero {selectedMonth ? `(${selectedMonth})` : "(Histórico total)"}
+            Resumen financiero{" "}
+            {selectedMonth ? `(${selectedMonth})` : "(Histórico total)"}
           </p>
         </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <input
               type="month"
@@ -325,7 +335,11 @@ export default function DashboardHome() {
             >
               <RefreshCw size={15} />
             </Button>
-            <Button variant="outline" onClick={handleExport} className="shrink-0 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              className="shrink-0 w-full sm:w-auto"
+            >
               <Download size={16} className="mr-1 sm:mr-2" />
               Excel
             </Button>
@@ -379,7 +393,9 @@ export default function DashboardHome() {
               <DollarSign className="text-amber-600 dark:text-amber-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">IVA por pagar</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                IVA por pagar
+              </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.iva)}
               </p>
@@ -409,7 +425,9 @@ export default function DashboardHome() {
               <FileText className="text-amber-600 dark:text-amber-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">ICA (1.25%)</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                ICA (1.25%)
+              </p>
               <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {formatCurrency(stats.valor125)}
               </p>
@@ -533,34 +551,38 @@ export default function DashboardHome() {
                 cuentasData
                   .sort((a, b) => (b.saldo_actual || 0) - (a.saldo_actual || 0))
                   .map((cuenta) => (
-                  <div
-                    key={cuenta.id}
-                    className={`flex items-center justify-between p-3 sm:p-4 rounded-lg ${
-                      cuenta.estado === false
-                        ? "bg-slate-50/50 dark:bg-slate-700/20 opacity-60"
-                        : "bg-slate-50 dark:bg-slate-700/50"
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">
-                        {cuenta.nombre}
-                        {cuenta.estado === false && (
-                          <span className="ml-2 text-xs text-slate-400">(inactiva)</span>
-                        )}
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 capitalize">
-                        {cuenta.tipo_cuenta?.replace("_", " ")}
+                    <div
+                      key={cuenta.id}
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg ${
+                        cuenta.estado === false
+                          ? "bg-slate-50/50 dark:bg-slate-700/20 opacity-60"
+                          : "bg-slate-50 dark:bg-slate-700/50"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">
+                          {cuenta.nombre}
+                          {cuenta.estado === false && (
+                            <span className="ml-2 text-xs text-slate-400">
+                              (inactiva)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 capitalize">
+                          {cuenta.tipo_cuenta?.replace("_", " ")}
+                        </p>
+                      </div>
+                      <p
+                        className={`font-semibold text-sm sm:text-base shrink-0 ml-2 ${
+                          (cuenta.saldo_actual || 0) < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-slate-800 dark:text-slate-100"
+                        }`}
+                      >
+                        {formatCurrency(cuenta.saldo_actual)}
                       </p>
                     </div>
-                    <p className={`font-semibold text-sm sm:text-base shrink-0 ml-2 ${
-                      (cuenta.saldo_actual || 0) < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-slate-800 dark:text-slate-100"
-                    }`}>
-                      {formatCurrency(cuenta.saldo_actual)}
-                    </p>
-                  </div>
-                ))
+                  ))
               )}
             </div>
             <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -612,9 +634,15 @@ export default function DashboardHome() {
                         }`}
                       >
                         {isIngreso(mov.tipo_movimiento) ? (
-                          <TrendingUp size={14} className="text-green-600 dark:text-green-400" />
+                          <TrendingUp
+                            size={14}
+                            className="text-green-600 dark:text-green-400"
+                          />
                         ) : (
-                          <TrendingDown size={14} className="text-red-600 dark:text-red-400" />
+                          <TrendingDown
+                            size={14}
+                            className="text-red-600 dark:text-red-400"
+                          />
                         )}
                       </div>
                       <div className="min-w-0">
@@ -654,7 +682,10 @@ export default function DashboardHome() {
               to="/movimientos"
               className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <FileText size={20} className="text-amber-600 dark:text-amber-400" />
+              <FileText
+                size={20}
+                className="text-amber-600 dark:text-amber-400"
+              />
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Nuevo Movimiento
               </span>
@@ -663,25 +694,31 @@ export default function DashboardHome() {
               to="/cuentas"
               className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <Wallet size={20} className="text-amber-600 dark:text-amber-400" />
+              <Wallet
+                size={20}
+                className="text-amber-600 dark:text-amber-400"
+              />
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Ver Cuentas
               </span>
             </Link>
             <Link
-              to="/movimientos"
+              to="/cartera"
               className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               <Clock size={20} className="text-amber-600 dark:text-amber-400" />
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
-                Pendientes
+                Cartera
               </span>
             </Link>
             <Link
-              to="/movimientos"
+              to="/reportes"
               className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
-              <DollarSign size={20} className="text-amber-600 dark:text-amber-400" />
+              <DollarSign
+                size={20}
+                className="text-amber-600 dark:text-amber-400"
+              />
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Reporte IVA
               </span>
