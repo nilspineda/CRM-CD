@@ -4,11 +4,17 @@ import { Search, MessageCircle, Wallet, AlertCircle } from "lucide-react";
 import Card, { CardContent } from "../../../components/ui/Card";
 import { facturasService } from "../../facturas/services/facturasService";
 import { clientesService } from "../../clientes/services/clientesService";
+import CambiarEstadoModal from "../../facturas/components/CambiarEstadoModal";
+import FacturaModal from "../../facturas/components/FacturaModal";
+import Button from "../../../components/ui/Button";
 import { formatCurrency, formatDate, getDateRange } from "../../../lib/utils";
 
 export default function CarteraPage() {
   const [query, setQuery] = useState("");
   const [mesResumen, setMesResumen] = useState("");
+  const [estadoModalOpen, setEstadoModalOpen] = useState(false);
+  const [facturaModalOpen, setFacturaModalOpen] = useState(false);
+  const [selectedFactura, setSelectedFactura] = useState(null);
 
   const getMonthRange = (value) => {
     if (!value) return getDateRange("month");
@@ -147,24 +153,35 @@ export default function CarteraPage() {
             Gestión de facturas pendientes y cobros
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Mes:
-          </label>
-          <input
-            type="month"
-            value={mesResumen}
-            onChange={(e) => setMesResumen(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-          />
-          {mesResumen && (
-            <button
-              onClick={() => setMesResumen("")}
-              className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
-            >
-              Ver todo
-            </button>
-          )}
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          <Button
+            onClick={() => {
+              setSelectedFactura(null);
+              setFacturaModalOpen(true);
+            }}
+            className="w-full sm:w-auto"
+          >
+            Nueva
+          </Button>
+          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Mes:
+            </label>
+            <input
+              type="month"
+              value={mesResumen}
+              onChange={(e) => setMesResumen(e.target.value)}
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+            />
+            {mesResumen && (
+              <button
+                onClick={() => setMesResumen("")}
+                className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
+              >
+                Ver todo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -226,7 +243,21 @@ export default function CarteraPage() {
                   return (
                     <tr key={factura.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
-                        {factura.prefijo}-{factura.numero_factura}
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {factura.prefijo}-{factura.numero_factura}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedFactura(factura);
+                              setFacturaModalOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-amber-500 transition-colors"
+                            title="Editar factura"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                          </button>
+                        </div>
                         {factura.estado === "pago_parcial" && (
                           <span className="block text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
                             Pago Parcial
@@ -258,20 +289,33 @@ export default function CarteraPage() {
                         {formatCurrency(factura.valor_pendiente)}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-center">
-                        {wsUrl ? (
-                          <a
-                            href={wsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-500/40 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-medium w-full sm:w-auto"
-                            title="Enviar recordatorio por WhatsApp"
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                          {wsUrl ? (
+                            <a
+                              href={wsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-500/40 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-medium w-full sm:w-auto"
+                              title="Enviar recordatorio por WhatsApp"
+                            >
+                              <MessageCircle size={16} />
+                              <span className="hidden sm:inline">Recordatorio</span>
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Sin teléfono</span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedFactura(factura);
+                              setEstadoModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto px-3 py-1.5"
                           >
-                            <MessageCircle size={16} />
-                            <span className="hidden sm:inline">Recordatorio</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Sin teléfono</span>
-                        )}
+                            Cambiar
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -281,6 +325,24 @@ export default function CarteraPage() {
           </table>
         </div>
       </Card>
+      
+      <CambiarEstadoModal
+        isOpen={estadoModalOpen}
+        onClose={() => {
+          setEstadoModalOpen(false);
+          setSelectedFactura(null);
+        }}
+        factura={selectedFactura}
+      />
+
+      <FacturaModal
+        isOpen={facturaModalOpen}
+        onClose={() => {
+          setFacturaModalOpen(false);
+          setSelectedFactura(null);
+        }}
+        factura={selectedFactura}
+      />
     </div>
   );
 }

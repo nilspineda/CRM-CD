@@ -33,6 +33,8 @@ import { FACTURAS_CONFIG } from "../../../lib/appConfig";
 import { useAuth } from "../../auth/AuthProvider";
 import { canPerform, PERMISSIONS } from "../../auth/permissions";
 import MovimientoLogsCard from "../../movimientos/components/MovimientoLogsCard";
+import CambiarEstadoModal from "../components/CambiarEstadoModal";
+import FacturaModal from "../components/FacturaModal";
 
 const PAGE_SIZE = 20;
 const LOGS_PAGE_SIZE = 50;
@@ -60,31 +62,13 @@ const emptyFacturaForm = {
   observaciones: "",
 };
 
-const emptyEstadoForm = {
-  estado: "pendiente",
-  fecha_pago: formatDateInput(new Date()),
-  cuenta_id: "",
-  observaciones: "",
-  valor_pagado: "",
-  fecha_proximo_pago: "",
-};
-
 export default function FacturasPage() {
   const { access, user, profile } = useAuth();
   const range = getDateRange("month");
-  const currentMonth = formatDateInput(range.start).slice(0, 7);
-  const [facturaModalOpen, setFacturaModalOpen] = useState(false);
-  const [estadoModalOpen, setEstadoModalOpen] = useState(false);
-  const [selectedFactura, setSelectedFactura] = useState(null);
-  const [facturaForm, setFacturaForm] = useState(emptyFacturaForm);
-  const [estadoForm, setEstadoForm] = useState(emptyEstadoForm);
-  const [clienteBusqueda, setClienteBusqueda] = useState("");
-  const [mostrarResultados, setMostrarResultados] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [page, setPage] = useState(1);
-  const [logsPage, setLogsPage] = useState(1);
-  const [logsMonth, setLogsMonth] = useState(currentMonth);
-  const [mesResumen, setMesResumen] = useState(currentMonth);
+  const currentMonthStr = `${range.start.getFullYear()}-${String(
+    range.start.getMonth() + 1
+  ).padStart(2, "0")}`;
+  
   const [filtros, setFiltros] = useState({
     fechaInicio: formatDateInput(range.start),
     fechaFin: formatDateInput(range.end),
@@ -92,6 +76,16 @@ export default function FacturasPage() {
     busqueda: "",
     ordenarPor: "fecha_creacion_desc",
   });
+  
+  const [mesResumen, setMesResumen] = useState(currentMonthStr);
+  const [page, setPage] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsMonth, setLogsMonth] = useState(currentMonthStr);
+
+  const [facturaModalOpen, setFacturaModalOpen] = useState(false);
+  const [estadoModalOpen, setEstadoModalOpen] = useState(false);
+  const [selectedFactura, setSelectedFactura] = useState(null);
+
   const queryClient = useQueryClient();
   const currentUserLabel = profile?.full_name || user?.email || "Sistema";
 
@@ -157,17 +151,15 @@ export default function FacturasPage() {
     [clientesData],
   );
 
-  const clientesFiltrados = useMemo(() => {
-    if (!clienteBusqueda.trim()) return [];
-    const busqueda = clienteBusqueda.toLowerCase().trim();
-    return clientesData.filter(
-      (cliente) =>
-        cliente.nit.toLowerCase().includes(busqueda) ||
-        cliente.nombre.toLowerCase().includes(busqueda) ||
-        (cliente.responsable &&
-          cliente.responsable.toLowerCase().includes(busqueda)),
-    );
-  }, [clientesData, clienteBusqueda]);
+  const openFacturaModal = (factura = null) => {
+    setSelectedFactura(factura);
+    setFacturaModalOpen(true);
+  };
+
+  const closeFacturaModal = () => {
+    setFacturaModalOpen(false);
+    setSelectedFactura(null);
+  };
 
   const cuentasMap = useMemo(
     () => new Map(cuentasData.map((cuenta) => [cuenta.id, cuenta])),
@@ -226,10 +218,18 @@ export default function FacturasPage() {
     let pendiente = 0;
 
     facturasEnriquecidas.forEach((f) => {
+      if (f.estado === "anulado") return;
       const val = Number(f.valor_total) || 0;
       total += val;
-      if (f.estado === "pagado") pagado += val;
-      else pendiente += val;
+      if (f.estado === "pagado") {
+        pagado += val;
+      } else if (f.estado === "pago_parcial") {
+        const abonado = Number(f.valor_pagado) || 0;
+        pagado += abonado;
+        pendiente += (val - abonado);
+      } else {
+        pendiente += val;
+      }
     });
 
     return { total, pagado, pendiente };
@@ -254,157 +254,18 @@ export default function FacturasPage() {
     };
   };
 
-  const openFacturaModal = (factura = null) => {
-    if (factura && !canPerform(access, PERMISSIONS.FACTURAS_EDIT)) return;
-    if (!factura && !canPerform(access, PERMISSIONS.FACTURAS_CREATE)) return;
-
-    setErrors({});
-    setClienteBusqueda("");
-    setMostrarResultados(false);
-    if (factura) {
-      setFacturaForm({
-        cliente_nit: factura.cliente_nit || "",
-        prefijo: factura.prefijo || "FE",
-        numero_factura: factura.numero_factura || "",
-        fecha_pago: formatDateInput(factura.fecha_pago || new Date()),
-        valor_total: String(factura.valor_total || ""),
-        observaciones: factura.observaciones || "",
-      });
-    } else {
-      setFacturaForm(emptyFacturaForm);
-    }
-    setSelectedFactura(factura);
-    setFacturaModalOpen(true);
-  };
-
-  const closeFacturaModal = () => {
-    setFacturaModalOpen(false);
-    setSelectedFactura(null);
-    setFacturaForm(emptyFacturaForm);
-    setClienteBusqueda("");
-    setMostrarResultados(false);
-    setErrors({});
-  };
-
-  const handleFacturaSubmit = async (e) => {
-    e.preventDefault();
-    if (selectedFactura && !canPerform(access, PERMISSIONS.FACTURAS_EDIT))
-      return;
-    if (!selectedFactura && !canPerform(access, PERMISSIONS.FACTURAS_CREATE))
-      return;
-
-    const nextErrors = {};
-    if (!facturaForm.cliente_nit)
-      nextErrors.cliente_nit = "El NIT es obligatorio";
-    if (!facturaForm.numero_factura)
-      nextErrors.numero_factura = "El número es obligatorio";
-    if (!facturaForm.valor_total || Number(facturaForm.valor_total) <= 0) {
-      nextErrors.valor_total = "El valor debe ser mayor a 0";
-    }
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      return;
-    }
-
-    try {
-      const payload = {
-        ...facturaForm,
-        valor_total: Number(facturaForm.valor_total),
-      };
-      if (selectedFactura) {
-        await actualizarMutate.mutateAsync({
-          id: selectedFactura.id,
-          data: payload,
-        });
-      } else {
-        await crearMutate.mutateAsync(payload);
-      }
-      closeFacturaModal();
-    } catch (error) {
-      console.error("Error guardando factura:", error);
-      alert(error.message || "Error al guardar la factura");
-    }
-  };
-
   const openEstadoModal = (factura) => {
     if (!canPerform(access, PERMISSIONS.FACTURAS_CHANGE_STATE)) return;
-
     setSelectedFactura(factura);
-    setEstadoForm({
-      estado: factura.estado || "pendiente",
-      fecha_pago: formatDateInput(factura.fecha_pago || new Date()),
-      cuenta_id: factura.cuenta_id || "",
-      observaciones: factura.observaciones || "",
-      valor_pagado: factura.valor_pagado || "",
-      fecha_proximo_pago: formatDateInput(factura.fecha_proximo_pago || ""),
-    });
     setEstadoModalOpen(true);
   };
 
   const closeEstadoModal = () => {
     setEstadoModalOpen(false);
     setSelectedFactura(null);
-    setEstadoForm(emptyEstadoForm);
   };
 
-  const handleEstadoSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedFactura) return;
-    if (!canPerform(access, PERMISSIONS.FACTURAS_CHANGE_STATE)) return;
 
-    try {
-      const esPagado = estadoForm.estado === "pagado";
-      const esRemision = selectedFactura.prefijo === "RM";
-      const esElectronica = selectedFactura.prefijo === "FE";
-
-      let cuentaId = selectedFactura.cuenta_id || null;
-      let valorPagado = null;
-      let fechaProximoPago = null;
-
-      if (!esPagado) {
-        cuentaId = null;
-        if (estadoForm.estado === "pago_parcial") {
-          valorPagado = Number(estadoForm.valor_pagado) || 0;
-          fechaProximoPago = estadoForm.fecha_proximo_pago || null;
-          if (esRemision || esElectronica) {
-              if (esRemision && estadoForm.cuenta_id) cuentaId = estadoForm.cuenta_id;
-              if (esElectronica && cuentaBancolombia?.id) cuentaId = cuentaBancolombia.id;
-          }
-        }
-      } else if (esRemision) {
-        if (!estadoForm.cuenta_id) {
-          alert("Selecciona la cuenta para cargar el dinero de la remisión.");
-          return;
-        }
-        cuentaId = estadoForm.cuenta_id;
-      } else if (esElectronica) {
-        if (!cuentaBancolombia?.id) {
-          alert(
-            `No se encontró la cuenta ${CUENTA_BANCOLOMBIA_OBJETIVO}. Crea o renombra esa cuenta para continuar.`,
-          );
-          return;
-        }
-        cuentaId = cuentaBancolombia.id;
-      }
-
-      const payload = {
-        ...selectedFactura,
-        ...estadoForm,
-        cuenta_id: cuentaId,
-        valor_pagado: valorPagado,
-        fecha_proximo_pago: fechaProximoPago,
-        valor_total: selectedFactura.valor_total,
-      };
-      await actualizarMutate.mutateAsync({
-        id: selectedFactura.id,
-        data: payload,
-      });
-      closeEstadoModal();
-    } catch (error) {
-      console.error("Error actualizando estado:", error);
-      alert(error.message || "Error al actualizar el estado");
-    }
-  };
 
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -775,271 +636,17 @@ export default function FacturasPage() {
         title="Logs de movimientos"
       />
 
-      <Modal
+      <FacturaModal
         isOpen={facturaModalOpen}
         onClose={closeFacturaModal}
-        title={selectedFactura ? "Editar Factura" : "Nueva Factura"}
-        size="lg"
-      >
-        <form onSubmit={handleFacturaSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Tipo"
-              value={facturaForm.prefijo}
-              onChange={(e) =>
-                setFacturaForm((prev) => ({ ...prev, prefijo: e.target.value }))
-              }
-            >
-              {PREFIJOS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Número"
-              value={facturaForm.numero_factura}
-              onChange={(e) =>
-                setFacturaForm((prev) => ({
-                  ...prev,
-                  numero_factura: e.target.value,
-                }))
-              }
-              error={errors.numero_factura}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Cliente <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Buscar por NIT, nombre o responsable..."
-                value={clienteBusqueda}
-                onChange={(e) => {
-                  setClienteBusqueda(e.target.value);
-                  setMostrarResultados(true);
-                }}
-                onFocus={() => clienteBusqueda && setMostrarResultados(true)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:bg-slate-800 dark:text-slate-100"
-              />
-              {facturaForm.cliente_nit && (
-                <div className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Cliente seleccionado:{" "}
-                    <strong>
-                      {clientesMap.get(facturaForm.cliente_nit)?.nombre ||
-                        facturaForm.cliente_nit}
-                    </strong>
-                  </p>
-                </div>
-              )}
-              {mostrarResultados &&
-                clienteBusqueda &&
-                clientesFiltrados.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                    {clientesFiltrados.map((cliente) => (
-                      <button
-                        key={cliente.nit}
-                        type="button"
-                        onClick={() => {
-                          setFacturaForm((prev) => ({
-                            ...prev,
-                            cliente_nit: cliente.nit,
-                          }));
-                          setClienteBusqueda("");
-                          setMostrarResultados(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0 transition-colors"
-                      >
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
-                          {cliente.nit} - {cliente.nombre}
-                        </div>
-                        {cliente.responsable && (
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            Responsable: {cliente.responsable}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              {mostrarResultados &&
-                clienteBusqueda &&
-                clientesFiltrados.length === 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-10 p-3">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      No hay clientes que coincidan con la búsqueda
-                    </p>
-                  </div>
-                )}
-            </div>
-            {errors.cliente_nit && (
-              <p className="text-sm text-red-500 mt-1">{errors.cliente_nit}</p>
-            )}
-          </div>
-          <Input
-            label="Fecha"
-            type="date"
-            value={facturaForm.fecha_pago}
-            onChange={(e) =>
-              setFacturaForm((prev) => ({
-                ...prev,
-                fecha_pago: e.target.value,
-              }))
-            }
-          />
-          <Input
-            label="Valor Total"
-            type="number"
-            value={facturaForm.valor_total}
-            onChange={(e) =>
-              setFacturaForm((prev) => ({
-                ...prev,
-                valor_total: e.target.value,
-              }))
-            }
-            error={errors.valor_total}
-            required
-          />
-          <Textarea
-            label="Observaciones"
-            value={facturaForm.observaciones}
-            onChange={(e) =>
-              setFacturaForm((prev) => ({
-                ...prev,
-                observaciones: e.target.value,
-              }))
-            }
-            rows={3}
-          />
-          <div className="flex justify-end gap-3 pt-2">
-            {errors.submit && (
-              <p className="text-sm text-red-500 self-center">{errors.submit}</p>
-            )}
-            <Button type="button" variant="outline" onClick={closeFacturaModal}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isMutating}>
-              Guardar
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        factura={selectedFactura}
+      />
 
-      <Modal
+      <CambiarEstadoModal
         isOpen={estadoModalOpen}
         onClose={closeEstadoModal}
-        title="Cambiar Estado"
-        size="md"
-      >
-        <form onSubmit={handleEstadoSubmit} className="space-y-4">
-          <Select
-            label="Estado"
-            value={estadoForm.estado}
-            onChange={(e) =>
-              setEstadoForm((prev) => ({ ...prev, estado: e.target.value }))
-            }
-          >
-            {ESTADOS_FILTRO.map((e) => (
-              <option key={e.value} value={e.value}>
-                {e.label}
-              </option>
-            ))}
-          </Select>
-          <Input
-            label="Fecha de Pago"
-            type="date"
-            value={estadoForm.fecha_pago}
-            onChange={(e) =>
-              setEstadoForm((prev) => ({ ...prev, fecha_pago: e.target.value }))
-            }
-          />
-          {estadoForm.estado === "pago_parcial" && (
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Valor Abonado"
-                type="number"
-                value={estadoForm.valor_pagado}
-                onChange={(e) =>
-                  setEstadoForm((prev) => ({ ...prev, valor_pagado: e.target.value }))
-                }
-              />
-              <Input
-                label="Fecha Próximo Pago"
-                type="date"
-                value={estadoForm.fecha_proximo_pago}
-                onChange={(e) =>
-                  setEstadoForm((prev) => ({ ...prev, fecha_proximo_pago: e.target.value }))
-                }
-              />
-            </div>
-          )}
-          {selectedFactura?.prefijo === "RM" && (estadoForm.estado === "pagado" || estadoForm.estado === "pago_parcial") && (
-            <div>
-              <Select
-                label="Cuenta a cargar"
-                value={estadoForm.cuenta_id}
-                onChange={(e) =>
-                  setEstadoForm((prev) => ({ ...prev, cuenta_id: e.target.value }))
-                }
-                required
-              >
-                <option value="">Seleccionar cuenta</option>
-                {cuentasData.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.nombre}
-                  </option>
-                ))}
-              </Select>
-              {errors.cuenta_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.cuenta_id}</p>
-              )}
-            </div>
-          )}
-          {selectedFactura?.prefijo === "FE" && (estadoForm.estado === "pagado" || estadoForm.estado === "pago_parcial") && (
-            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
-              Factura electrónica: el dinero se cargará automáticamente a{" "}
-              <strong>
-                {cuentaBancolombia?.nombre || CUENTA_BANCOLOMBIA_OBJETIVO}
-              </strong>
-              .
-            </div>
-          )}
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Valor:{" "}
-            <strong>
-              {selectedFactura
-                ? formatCurrency(selectedFactura.valor_total)
-                : "-"}
-            </strong>
-          </div>
-          <Textarea
-            label="Observaciones"
-            value={estadoForm.observaciones}
-            onChange={(e) =>
-              setEstadoForm((prev) => ({
-                ...prev,
-                observaciones: e.target.value,
-              }))
-            }
-            rows={2}
-          />
-          <div className="flex justify-end gap-3 pt-2">
-            {errors.submit && (
-              <p className="text-sm text-red-500 self-center">{errors.submit}</p>
-            )}
-            <Button type="button" variant="outline" onClick={closeEstadoModal}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isMutating}>
-              Actualizar
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        factura={selectedFactura}
+      />
     </div>
   );
 }

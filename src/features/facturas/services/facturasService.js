@@ -138,10 +138,11 @@ export const facturasService = {
 
   async update(id, factura) {
     const anterior = await this.getById(id);
+    const merged = { ...anterior, ...factura };
     const payload = {
-      ...sanitizeFacturaPayload(factura),
-      observaciones: factura.observaciones || null,
-      cuenta_id: factura.cuenta_id || null,
+      ...sanitizeFacturaPayload(merged),
+      observaciones: merged.observaciones || null,
+      cuenta_id: merged.cuenta_id || null,
       updated_at: new Date().toISOString(),
     };
 

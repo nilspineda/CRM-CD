@@ -111,11 +111,15 @@ const DashboardTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardHome() {
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7)
-  );
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   const getMonthRange = (monthStr) => {
+    if (!monthStr) {
+      // Si no hay mes seleccionado, retorna rango de "todo el tiempo"
+      const start = new Date("2000-01-01T00:00:00Z");
+      const end = new Date("2100-12-31T23:59:59Z");
+      return { start, end };
+    }
     const [year, month] = monthStr.split("-").map(Number);
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0);
@@ -123,6 +127,11 @@ export default function DashboardHome() {
   };
 
   const getYearRange = (monthStr) => {
+    if (!monthStr) {
+      const start = new Date("2000-01-01T00:00:00Z");
+      const end = new Date("2100-12-31T23:59:59Z");
+      return { start, end };
+    }
     const year = Number(monthStr.split("-")[0]);
     const start = new Date(Date.UTC(year, 0, 1));
     const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
@@ -279,16 +288,26 @@ export default function DashboardHome() {
             Dashboard
           </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
-            Resumen financiero
+            Resumen financiero {selectedMonth ? `(${selectedMonth})` : "(Histórico total)"}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3">
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 w-full sm:w-auto text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-2 w-full text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+            />
+            {selectedMonth && (
+              <button
+                onClick={() => setSelectedMonth("")}
+                className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors shrink-0"
+              >
+                Ver todo
+              </button>
+            )}
+          </div>
           <Button variant="outline" onClick={handleExport} className="shrink-0 w-full sm:w-auto">
             <Download size={16} className="mr-1 sm:mr-2" />
             Excel
@@ -311,7 +330,7 @@ export default function DashboardHome() {
                 {formatCurrency(stats.ingresos)}
               </p>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
-                Movimientos pagados del mes actual
+                Movimientos pagados {selectedMonth ? "del mes" : "históricos"}
               </p>
             </div>
           </CardContent>
@@ -330,7 +349,7 @@ export default function DashboardHome() {
                 {formatCurrency(stats.egresos)}
               </p>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-500 mt-1">
-                Movimientos pagados del mes actual
+                Movimientos pagados {selectedMonth ? "del mes" : "históricos"}
               </p>
             </div>
           </CardContent>
