@@ -118,7 +118,8 @@ export default function MovimientosPage() {
     };
     movimientosFiltrados.forEach((m) => {
       if (m.estado === "pendiente") calc.pendientes += 1;
-      if (m.estado === "pagado") calc.totalPagado += Math.abs(m.valor_total || 0);
+      if (m.estado === "pagado")
+        calc.totalPagado += Math.abs(m.valor_total || 0);
     });
     return calc;
   }, [movimientosFiltrados]);
@@ -220,13 +221,13 @@ export default function MovimientosPage() {
     <div className="space-y-4 sm:space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 w-full">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
             Movimientos Bancarios
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
             Solo egresos y movimientos de caja o banco
           </p>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Mes seleccionado: {mesFiltro}
           </p>
         </div>
@@ -262,8 +263,10 @@ export default function MovimientosPage() {
                 <TrendingDown className="text-red-600 w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-600">Movimientos</p>
-                <p className="text-sm sm:text-lg font-bold text-slate-800 truncate">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Movimientos
+                </p>
+                <p className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
                   {stats.cantidad}
                 </p>
               </div>
@@ -273,12 +276,14 @@ export default function MovimientosPage() {
         <Card className="w-full">
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg shrink-0">
-                <DollarSign className="text-orange-600 w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg shrink-0">
+                <DollarSign className="text-orange-600 dark:text-orange-400 w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-600">Total pagado</p>
-                <p className="text-sm sm:text-lg font-bold text-slate-800 truncate">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Total pagado
+                </p>
+                <p className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
                   {formatCurrency(stats.totalPagado)}
                 </p>
               </div>
@@ -288,12 +293,14 @@ export default function MovimientosPage() {
         <Card className="w-full">
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-slate-100 rounded-lg shrink-0">
-                <TrendingDown className="text-slate-600 w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="p-1.5 sm:p-2 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">
+                <TrendingDown className="text-slate-600 dark:text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-600">Pendientes</p>
-                <p className="text-sm sm:text-lg font-bold text-slate-800 truncate">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Pendientes
+                </p>
+                <p className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
                   {stats.pendientes}
                 </p>
               </div>
@@ -307,7 +314,7 @@ export default function MovimientosPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 items-end">
             <div className="sm:col-span-2 relative">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                 size={16}
               />
               <input
@@ -316,20 +323,23 @@ export default function MovimientosPage() {
                 placeholder="Buscar..."
                 value={filtros.busqueda}
                 onChange={handleFilterChange}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
             <input
               type="month"
               value={mesFiltro}
-              onChange={(e) => { setMesFiltro(e.target.value); setPage(1); }}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              onChange={(e) => {
+                setMesFiltro(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:bg-slate-800 dark:text-slate-100"
             />
             <select
               name="tipoMovimiento"
               value={filtros.tipoMovimiento}
               onChange={handleFilterChange}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Todos los movimientos</option>
               {tiposMovimiento.map((tipo) => (
@@ -342,10 +352,10 @@ export default function MovimientosPage() {
               name="ordenarPor"
               value={filtros.ordenarPor}
               onChange={handleFilterChange}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="fecha_desc">Más recientes primero</option>
-              <option value="fecha_asc">M��s antiguos primero</option>
+              <option value="fecha_asc">Más antiguos primero</option>
               <option value="valor_total_desc">Mayor valor primero</option>
               <option value="valor_total_asc">Menor valor primero</option>
             </select>
@@ -361,35 +371,35 @@ export default function MovimientosPage() {
 
       <Card className="w-full overflow-hidden">
         <div className="overflow-x-auto mobile-card-table">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 hidden md:table-header-group">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead className="bg-slate-50 dark:bg-slate-800 hidden md:table-header-group">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Fecha
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase min-w-[200px]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase min-w-[200px]">
                   Tipo
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Cuenta
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Valor
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Estado
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-4 py-12 text-center text-slate-500"
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     Cargando...
                   </td>
@@ -398,24 +408,32 @@ export default function MovimientosPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-4 py-12 text-center text-slate-500"
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay movimientos para mostrar
                   </td>
                 </tr>
               ) : (
                 movimientosPaginados.map((movimiento) => (
-                  <tr key={movimiento.id} className="hover:bg-slate-50">
-                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
+                  <tr
+                    key={movimiento.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                       {formatDate(movimiento.fecha)}
                     </td>
-                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 min-w-[200px] max-w-[250px]" title={getTipoMovimientoLabel(movimiento.tipo_movimiento)}>
-                      <span className="block truncate">{getTipoMovimientoLabel(movimiento.tipo_movimiento)}</span>
+                    <td
+                      className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 min-w-[200px] max-w-[250px]"
+                      title={getTipoMovimientoLabel(movimiento.tipo_movimiento)}
+                    >
+                      <span className="block truncate">
+                        {getTipoMovimientoLabel(movimiento.tipo_movimiento)}
+                      </span>
                     </td>
-                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700">
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                       {movimiento.cuentas_financieras?.nombre || "-"}
                     </td>
-                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 text-right font-medium">
+                    <td className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                       {formatCurrency(movimiento.valor_total)}
                     </td>
                     <td className="px-3 md:px-4 py-3">
@@ -432,7 +450,7 @@ export default function MovimientosPage() {
                         <button
                           onClick={() => handleEdit(movimiento)}
                           disabled={isMutating}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+                          className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg disabled:opacity-50"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -447,9 +465,9 @@ export default function MovimientosPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <div className="text-sm text-slate-600">
-              Mostrando {((page - 1) * PAGE_SIZE) + 1} -{" "}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Mostrando {(page - 1) * PAGE_SIZE + 1} -{" "}
               {Math.min(page * PAGE_SIZE, movimientosFiltrados.length)} de{" "}
               {movimientosFiltrados.length}
             </div>
@@ -457,14 +475,14 @@ export default function MovimientosPage() {
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all"
               >
                 Anterior
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white hover:border-slate-400 transition-all"
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all"
               >
                 Siguiente
               </button>
@@ -479,9 +497,7 @@ export default function MovimientosPage() {
           setModalOpen(false);
           setMovimientoEditando(null);
         }}
-        title={
-          movimientoEditando ? "Editar Movimiento" : "Nuevo Movimiento"
-        }
+        title={movimientoEditando ? "Editar Movimiento" : "Nuevo Movimiento"}
         size="lg"
       >
         <MovimientoForm

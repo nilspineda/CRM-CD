@@ -129,9 +129,8 @@ export default function MovimientoForm({
   const saldoActualCuenta = cuentaSeleccionada?.saldo_actual || 0;
   const valor = Number(formData.valor_total) || 0;
   const esIngreso = isIngreso(formData.tipo_movimiento);
-  const impacto = formData.estado === "pagado"
-    ? (esIngreso ? valor : -valor)
-    : 0;
+  const impacto =
+    formData.estado === "pagado" ? (esIngreso ? valor : -valor) : 0;
   const saldoDespues = saldoActualCuenta + impacto;
 
   const tiposConocidos = new Set(
@@ -195,7 +194,11 @@ export default function MovimientoForm({
           <option value="">Seleccionar cuenta</option>
           {cuentas.map((cuenta) => (
             <option key={cuenta.id} value={cuenta.id}>
-              {cuenta.nombre} — {cuenta.saldo_actual?.toLocaleString("es-CO", { style: "currency", currency: "COP" })}
+              {cuenta.nombre} —{" "}
+              {cuenta.saldo_actual?.toLocaleString("es-CO", {
+                style: "currency",
+                currency: "COP",
+              })}
             </option>
           ))}
         </Select>
@@ -238,26 +241,32 @@ export default function MovimientoForm({
       />
 
       {cuentaSeleccionada && formData.estado === "pagado" && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
-          <p className="font-medium text-slate-800">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
+          <p className="font-medium text-slate-800 dark:text-slate-100">
             Saldo actual de la cuenta
           </p>
-          <p>{cuentaSeleccionada.nombre}</p>
-          <p>
+          <p className="dark:text-slate-300">{cuentaSeleccionada.nombre}</p>
+          <p className="dark:text-slate-300">
             Saldo actual:{" "}
             {saldoActualCuenta.toLocaleString("es-CO", {
               style: "currency",
               currency: "COP",
             })}
           </p>
-          <p className={esIngreso ? "text-green-600" : "text-red-600"}>
+          <p
+            className={
+              esIngreso
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }
+          >
             {esIngreso ? "+" : "−"}{" "}
             {valor.toLocaleString("es-CO", {
               style: "currency",
               currency: "COP",
             })}
           </p>
-          <p className="font-semibold text-slate-800">
+          <p className="font-semibold text-slate-800 dark:text-slate-100">
             Saldo después:{" "}
             {saldoDespues.toLocaleString("es-CO", {
               style: "currency",

@@ -1,5 +1,5 @@
 // filepath: src/features/facturas/pages/FacturasPage.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -68,6 +68,8 @@ export default function FacturasPage() {
   const [selectedFactura, setSelectedFactura] = useState(null);
   const [facturaForm, setFacturaForm] = useState(emptyFacturaForm);
   const [estadoForm, setEstadoForm] = useState(emptyEstadoForm);
+  const [clienteBusqueda, setClienteBusqueda] = useState("");
+  const [mostrarResultados, setMostrarResultados] = useState(false);
   const [errors, setErrors] = useState({});
   const [page, setPage] = useState(1);
   const [mesResumen, setMesResumen] = useState(currentMonth);
@@ -129,6 +131,18 @@ export default function FacturasPage() {
     [clientesData],
   );
 
+  const clientesFiltrados = useMemo(() => {
+    if (!clienteBusqueda.trim()) return [];
+    const busqueda = clienteBusqueda.toLowerCase().trim();
+    return clientesData.filter(
+      (cliente) =>
+        cliente.nit.toLowerCase().includes(busqueda) ||
+        cliente.nombre.toLowerCase().includes(busqueda) ||
+        (cliente.responsable &&
+          cliente.responsable.toLowerCase().includes(busqueda)),
+    );
+  }, [clientesData, clienteBusqueda]);
+
   const cuentasMap = useMemo(
     () => new Map(cuentasData.map((cuenta) => [cuenta.id, cuenta])),
     [cuentasData],
@@ -166,6 +180,8 @@ export default function FacturasPage() {
     if (!factura && !canPerform(access, PERMISSIONS.FACTURAS_CREATE)) return;
 
     setErrors({});
+    setClienteBusqueda("");
+    setMostrarResultados(false);
     if (factura) {
       setFacturaForm({
         cliente_nit: factura.cliente_nit || "",
@@ -186,6 +202,8 @@ export default function FacturasPage() {
     setFacturaModalOpen(false);
     setSelectedFactura(null);
     setFacturaForm(emptyFacturaForm);
+    setClienteBusqueda("");
+    setMostrarResultados(false);
     setErrors({});
   };
 
@@ -456,7 +474,10 @@ export default function FacturasPage() {
                 facturasPaginadas.map((factura) => {
                   const taxes = computeFacturaTaxes(factura);
                   return (
-                    <tr key={factura.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 dark:bg-slate-800">
+                    <tr
+                      key={factura.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700 dark:bg-slate-800"
+                    >
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
                         {factura.prefijo}-{factura.numero_factura}
                       </td>
@@ -527,18 +548,18 @@ export default function FacturasPage() {
             </div>
             <div className="flex gap-2">
               <button
-onClick={() => handlePageChange(page - 1)}
-                 disabled={page <= 1}
-                 className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
-               >
-                 Anterior
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
+              >
+                Anterior
               </button>
               <button
-onClick={() => handlePageChange(page + 1)}
-                 disabled={page >= totalPages}
-                 className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
-               >
-                 Siguiente
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 hover:border-slate-400 transition-all"
+              >
+                Siguiente
               </button>
             </div>
           </div>
@@ -579,25 +600,77 @@ onClick={() => handlePageChange(page + 1)}
               required
             />
           </div>
-          <Select
-            label="Cliente"
-            value={facturaForm.cliente_nit}
-            onChange={(e) =>
-              setFacturaForm((prev) => ({
-                ...prev,
-                cliente_nit: e.target.value,
-              }))
-            }
-            error={errors.cliente_nit}
-            required
-          >
-            <option value="">Seleccionar cliente</option>
-            {clientesData.map((c) => (
-              <option key={c.nit} value={c.nit}>
-                {c.nit} - {c.nombre}
-              </option>
-            ))}
-          </Select>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Cliente <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar por NIT, nombre o responsable..."
+                value={clienteBusqueda}
+                onChange={(e) => {
+                  setClienteBusqueda(e.target.value);
+                  setMostrarResultados(true);
+                }}
+                onFocus={() => clienteBusqueda && setMostrarResultados(true)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:bg-slate-800 dark:text-slate-100"
+              />
+              {facturaForm.cliente_nit && (
+                <div className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Cliente seleccionado:{" "}
+                    <strong>
+                      {clientesMap.get(facturaForm.cliente_nit)?.nombre ||
+                        facturaForm.cliente_nit}
+                    </strong>
+                  </p>
+                </div>
+              )}
+              {mostrarResultados &&
+                clienteBusqueda &&
+                clientesFiltrados.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                    {clientesFiltrados.map((cliente) => (
+                      <button
+                        key={cliente.nit}
+                        type="button"
+                        onClick={() => {
+                          setFacturaForm((prev) => ({
+                            ...prev,
+                            cliente_nit: cliente.nit,
+                          }));
+                          setClienteBusqueda("");
+                          setMostrarResultados(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0 transition-colors"
+                      >
+                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                          {cliente.nit} - {cliente.nombre}
+                        </div>
+                        {cliente.responsable && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            Responsable: {cliente.responsable}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              {mostrarResultados &&
+                clienteBusqueda &&
+                clientesFiltrados.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-10 p-3">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No hay clientes que coincidan con la búsqueda
+                    </p>
+                  </div>
+                )}
+            </div>
+            {errors.cliente_nit && (
+              <p className="text-sm text-red-500 mt-1">{errors.cliente_nit}</p>
+            )}
+          </div>
           <Input
             label="Fecha"
             type="date"
