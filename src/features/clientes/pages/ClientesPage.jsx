@@ -247,7 +247,7 @@ export default function ClientesPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed mobile-card-table">
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
                 <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
@@ -301,13 +301,13 @@ export default function ClientesPage() {
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center font-medium">
                       {cliente.nit}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center">
+                    <td data-label="Empresa" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center">
                       {cliente.nombre}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td data-label="Responsable" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                       {cliente.responsable || "-"}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td data-label="Teléfono" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                       {cliente.telefono ? (
                         <a
                           href={getWhatsAppUrl(cliente.telefono)}
@@ -323,7 +323,7 @@ export default function ClientesPage() {
                         "-"
                       )}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all">
+                    <td data-label="Correo" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all">
                       {cliente.correo ? (
                         <a
                           href={getGmailComposeUrl(cliente.correo)}
@@ -339,11 +339,11 @@ export default function ClientesPage() {
                         "-"
                       )}
                     </td>
-                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td data-label="Dirección" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                       {cliente.direccion || "-"}
                     </td>
                     <td className="px-3 sm:px-4 py-3">
-                      <div className="flex justify-center items-center">
+                      <div className="flex justify-center items-center gap-2">
                         <button
                           onClick={() => handleToggleState(cliente)}
                           disabled={isMutating}
@@ -371,7 +371,6 @@ export default function ClientesPage() {
                           variant="outline"
                           onClick={() => openModal(cliente)}
                           disabled={isMutating}
-                          className="ml-2"
                         >
                           Editar
                         </Button>

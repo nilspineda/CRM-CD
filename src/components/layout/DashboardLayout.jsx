@@ -197,34 +197,34 @@ export default function DashboardLayout() {
       </aside>
 
       <div className="lg:pl-72 min-h-screen flex flex-col min-w-0">
-        <header className="h-16 sm:h-20 bg-white dark:bg-slate-900 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3 px-3 sm:px-6 sticky top-0 z-30 shrink-0">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <header className="h-14 md:h-16 lg:h-20 bg-white dark:bg-slate-900 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-2 md:gap-3 px-3 md:px-6 sticky top-0 z-30 shrink-0 pt-safe">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
             <button
-              className="lg:hidden p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shrink-0"
+              className="lg:hidden p-2 md:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shrink-0 touch-target flex items-center justify-center"
               onClick={() => setSidebarOpen(true)}
               aria-label="Abrir menu"
             >
               <Menu size={20} />
             </button>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+              <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
                 {currentPage?.label || "Dashboard"}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block truncate">
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 hidden md:block truncate">
                 {currentPage?.description || "Resumen general"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
+              <span className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-300">
                 Sistema activo
               </span>
             </div>
             <button
-              className="p-2 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-2 md:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors touch-target flex items-center justify-center"
               aria-label="Configuracion"
             >
               <Settings size={18} />
@@ -232,14 +232,14 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 w-full min-w-0">
+        <main className="flex-1 p-3 md:p-4 lg:p-5 xl:p-6 w-full min-w-0 mobile-scroll">
           <Outlet />
         </main>
 
         <OfflineIndicator />
         <InstallPrompt />
 
-        <footer className="border-t border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-400">
+        <footer className="border-t border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 pb-safe text-center text-sm text-slate-600 dark:text-slate-400">
           Elaborado por{" "}
           <a
             href="https://nilspineda.com"
