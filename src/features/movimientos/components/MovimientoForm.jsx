@@ -3,7 +3,7 @@ import Input, { Select, Textarea } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../services/movimientosService";
-import { getTipoMovimientoLabel, isIngreso } from "../../../lib/utils";
+import { isIngreso } from "../../../lib/utils";
 import { TIPOS_MOVIMIENTO_EGRESOS, CATEGORY_ORDER_EGRESOS } from "../constants";
 
 const ESTADOS = [
@@ -121,15 +121,14 @@ export default function MovimientoForm({
   const cuentaSeleccionada = cuentas.find(
     (cuenta) => cuenta.id === formData.cuenta_id,
   );
-  const saldoActualCuenta = cuentaSeleccionada?.saldo_actual || 0;
+  const saldoTotalCuenta =
+    (Number(cuentaSeleccionada?.saldo_inicial) || 0) +
+    (Number(cuentaSeleccionada?.saldo_actual) || 0);
   const valor = Number(formData.valor_total) || 0;
   const esIngreso = isIngreso(formData.tipo_movimiento);
   const impacto =
     formData.estado === "pagado" ? (esIngreso ? valor : -valor) : 0;
-  const saldoDespues = saldoActualCuenta + impacto;
-
-  const tiposConocidos = new Set(TIPOS_MOVIMIENTO_EGRESOS.map((t) => t.value));
-  const tiposExtras = tiposMovimiento.filter((t) => !tiposConocidos.has(t));
+  const saldoDespues = saldoTotalCuenta + impacto;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -165,15 +164,6 @@ export default function MovimientoForm({
               </optgroup>
             );
           })}
-          {tiposExtras.length > 0 && (
-            <optgroup label="Otros">
-              {tiposExtras.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {getTipoMovimientoLabel(tipo)}
-                </option>
-              ))}
-            </optgroup>
-          )}
         </Select>
 
         <Select
@@ -187,8 +177,8 @@ export default function MovimientoForm({
           <option value="">Seleccionar cuenta</option>
           {cuentas.map((cuenta) => (
             <option key={cuenta.id} value={cuenta.id}>
-              {cuenta.nombre} —{" "}
-              {cuenta.saldo_actual?.toLocaleString("es-CO", {
+              {cuenta.nombre} — {" "}
+              {((Number(cuenta.saldo_inicial) || 0) + (Number(cuenta.saldo_actual) || 0)).toLocaleString("es-CO", {
                 style: "currency",
                 currency: "COP",
               })}
@@ -226,12 +216,12 @@ export default function MovimientoForm({
       {cuentaSeleccionada && formData.estado === "pagado" && (
         <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
           <p className="font-medium text-slate-800 dark:text-slate-100">
-            Saldo actual de la cuenta
+            Saldo total de la cuenta
           </p>
           <p className="dark:text-slate-300">{cuentaSeleccionada.nombre}</p>
           <p className="dark:text-slate-300">
-            Saldo actual:{" "}
-            {saldoActualCuenta.toLocaleString("es-CO", {
+            Saldo total: {" "}
+            {saldoTotalCuenta.toLocaleString("es-CO", {
               style: "currency",
               currency: "COP",
             })}

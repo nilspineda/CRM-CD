@@ -1,5 +1,5 @@
 ﻿// filepath: src/features/movimientos/pages/MovimientosPage.jsx
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -24,11 +24,14 @@ import {
 } from "../../../lib/utils";
 import { exportToExcel } from "../../../lib/exportExcel";
 import MovimientoForm from "../components/MovimientoForm";
+import MovimientoLogsCard from "../components/MovimientoLogsCard";
+import { useAuth } from "../../auth/AuthProvider";
 
-const LOGS_PAGE_SIZE = 30;
+const LOGS_PAGE_SIZE = 50;
 const PAGE_SIZE = 30;
 
 export default function MovimientosPage() {
+  const { user, profile } = useAuth();
   const currentMonth = formatDateInput(new Date()).slice(0, 7);
   const [modalOpen, setModalOpen] = useState(false);
   const [movimientoEditando, setMovimientoEditando] = useState(null);
@@ -42,7 +45,9 @@ export default function MovimientosPage() {
   });
   const [page, setPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
+  const [logsMonth, setLogsMonth] = useState(currentMonth);
   const queryClient = useQueryClient();
+  const currentUserLabel = profile?.full_name || user?.email || "Sistema";
 
   const getMonthRange = (value) => {
     const [year, month] = (value || currentMonth).split("-").map(Number);
@@ -70,11 +75,12 @@ export default function MovimientosPage() {
   });
 
   const { data: logsData, isLoading: logsLoading } = useQuery({
-    queryKey: ["movimientos", "logs", logsPage],
+    queryKey: ["movimientos", "logs", logsPage, logsMonth],
     queryFn: () =>
       movimientosService.getLogs({
         page: logsPage,
         pageSize: LOGS_PAGE_SIZE,
+        month: logsMonth,
       }),
     initialData: { data: [], count: 0 },
   });
@@ -83,6 +89,7 @@ export default function MovimientosPage() {
     mutationFn: movimientosService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+      queryClient.invalidateQueries({ queryKey: ["cuentas"] });
     },
   });
 
@@ -90,6 +97,7 @@ export default function MovimientosPage() {
     mutationFn: ({ id, data }) => movimientosService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+      queryClient.invalidateQueries({ queryKey: ["cuentas"] });
     },
   });
 
@@ -173,6 +181,28 @@ export default function MovimientosPage() {
     setPage(1);
   };
 
+  const handleDownloadLogs = async () => {
+    if (!logsCount) return;
+
+    const { data } = await movimientosService.getLogs({
+      page: 1,
+      pageSize: Math.max(logsCount, 1),
+      month: logsMonth,
+    });
+
+    exportToExcel({
+      fileName: `logs-movimientos-${logsMonth || currentMonth}`,
+      sheetName: "Logs",
+      columns: [
+        { header: "Fecha", value: (log) => log.created_at || log.fecha_hora || log.fecha || "" },
+        { header: "Usuario", value: (log) => log.usuario_email || log.user_email || log.usuario || log.user_name || log.created_by || currentUserLabel },
+        { header: "Acción", value: (log) => log.accion || log.action || log.tipo_accion || "Movimiento" },
+        { header: "Detalle", value: (log) => log.detalle || log.descripcion || log.observaciones || "Sin detalle" },
+      ],
+      rows: data || [],
+    });
+  };
+
   const handleExport = () => {
     exportToExcel({
       fileName: "movimientos-financieros",
@@ -193,23 +223,6 @@ export default function MovimientosPage() {
       ],
       rows: movimientosFiltrados,
     });
-  };
-
-  const getLogDateTime = (log) => log.created_at || log.fecha_hora || log.fecha;
-  const getLogUser = (log) =>
-    log.usuario_email ||
-    log.user_email ||
-    log.usuario ||
-    log.user_name ||
-    log.created_by ||
-    "Sistema";
-  const getLogAction = (log) =>
-    log.accion || log.action || log.tipo_accion || "Movimiento";
-  const getLogDetail = (log) => {
-    if (log.detalle) return log.detalle;
-    if (log.descripcion) return log.descripcion;
-    if (log.observaciones) return log.observaciones;
-    return "Sin detalle";
   };
 
   const handlePageChange = (newPage) => setPage(newPage);
@@ -377,7 +390,7 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Fecha
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase min-w-[200px]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase min-w-50">
                   Tipo
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
@@ -423,7 +436,7 @@ export default function MovimientosPage() {
                       {formatDate(movimiento.fecha)}
                     </td>
                     <td
-                      className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 min-w-[200px] max-w-[250px]"
+                      className="px-3 md:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 min-w-50 max-w-62.5"
                       title={getTipoMovimientoLabel(movimiento.tipo_movimiento)}
                     >
                       <span className="block truncate">
@@ -460,6 +473,25 @@ export default function MovimientosPage() {
                   </tr>
                 ))
               )}
+
+              <MovimientoLogsCard
+                logs={logs}
+                loading={logsLoading || isLoading}
+                page={logsPage}
+                totalPages={logsTotalPages}
+                totalCount={logsCount}
+                pageSize={LOGS_PAGE_SIZE}
+                onPageChange={(newPage) => setLogsPage(newPage)}
+                selectedMonth={logsMonth}
+                onMonthChange={(month) => {
+                  setLogsMonth(month);
+                  setLogsPage(1);
+                }}
+                onDownload={handleDownloadLogs}
+                downloading={logsLoading}
+                currentUserLabel={currentUserLabel}
+                title="Logs de movimientos"
+              />
             </tbody>
           </table>
         </div>
@@ -490,6 +522,17 @@ export default function MovimientosPage() {
           </div>
         )}
       </Card>
+
+      <MovimientoLogsCard
+        logs={logs}
+        loading={logsLoading}
+        page={logsPage}
+        totalPages={logsTotalPages}
+        totalCount={logsCount}
+        pageSize={LOGS_PAGE_SIZE}
+        onPageChange={handleLogsPageChange}
+        title="Logs de movimientos"
+      />
 
       <Modal
         isOpen={modalOpen}

@@ -1,30 +1,52 @@
 // filepath: src/features/clientes/pages/ClientesPage.jsx
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Users } from 'lucide-react';
-import Card, { CardContent } from '../../../components/ui/Card';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Badge from '../../../components/ui/Badge';
-import Input, { Textarea } from '../../../components/ui/Input';
-import { clientesService } from '../services/clientesService';
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Mail, MessageCircle, Plus, Search, Users } from "lucide-react";
+import Card, { CardContent } from "../../../components/ui/Card";
+import Button from "../../../components/ui/Button";
+import Modal from "../../../components/ui/Modal";
+import Badge from "../../../components/ui/Badge";
+import Input, { Textarea } from "../../../components/ui/Input";
+import { clientesService } from "../services/clientesService";
 
 const emptyForm = {
-  nit: '',
-  nombre: '',
-  telefono: '',
-  correo: '',
-  direccion: '',
-  responsable: '',
-  fecha_cumpleaños: '',
-  observaciones: '',
+  nit: "",
+  nombre: "",
+  telefono: "",
+  correo: "",
+  direccion: "",
+  responsable: "",
+  fecha_cumpleaños: "",
+  observaciones: "",
   estado: true,
 };
 
 const PAGE_SIZE = 20;
 
+function getWhatsAppUrl(phone) {
+  if (!phone) return null;
+
+  const digits = String(phone).replace(/\D/g, "");
+  if (!digits) return null;
+
+  // Si viene sin prefijo y parece numero local de CO (10 digitos), agregar 57.
+  const normalized =
+    digits.length === 10 && !digits.startsWith("57") ? `57${digits}` : digits;
+
+  return `https://wa.me/${normalized}`;
+}
+
+function getGmailComposeUrl(email) {
+  if (!email) return null;
+
+  const normalized = String(email).trim();
+  if (!normalized) return null;
+
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(normalized)}`;
+}
+
 export default function ClientesPage() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -33,21 +55,21 @@ export default function ClientesPage() {
   const queryClient = useQueryClient();
 
   const { data: clientes = [], isLoading } = useQuery({
-    queryKey: ['clientes'],
+    queryKey: ["clientes"],
     queryFn: clientesService.getAll,
   });
 
   const crearMutate = useMutation({
     mutationFn: clientesService.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
     },
   });
 
   const actualizarMutate = useMutation({
     mutationFn: ({ id, data }) => clientesService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
     },
   });
 
@@ -90,14 +112,14 @@ export default function ClientesPage() {
     setForm(
       cliente
         ? {
-            nit: cliente.nit || '',
-            nombre: cliente.nombre || '',
-            telefono: cliente.telefono || '',
-            correo: cliente.correo || '',
-            direccion: cliente.direccion || '',
-            responsable: cliente.responsable || '',
-            fecha_cumpleaños: cliente.fecha_cumpleaños || '',
-            observaciones: cliente.observaciones || '',
+            nit: cliente.nit || "",
+            nombre: cliente.nombre || "",
+            telefono: cliente.telefono || "",
+            correo: cliente.correo || "",
+            direccion: cliente.direccion || "",
+            responsable: cliente.responsable || "",
+            fecha_cumpleaños: cliente.fecha_cumpleaños || "",
+            observaciones: cliente.observaciones || "",
             estado: cliente.estado !== false,
           }
         : emptyForm,
@@ -115,8 +137,8 @@ export default function ClientesPage() {
     event.preventDefault();
     const nextErrors = {};
 
-    if (!form.nit) nextErrors.nit = 'El NIT es obligatorio';
-    if (!form.nombre) nextErrors.nombre = 'El nombre es obligatorio';
+    if (!form.nit) nextErrors.nit = "El NIT es obligatorio";
+    if (!form.nombre) nextErrors.nombre = "El nombre es obligatorio";
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -137,15 +159,18 @@ export default function ClientesPage() {
       };
 
       if (selectedCliente) {
-        await actualizarMutate.mutateAsync({ id: selectedCliente.id, data: payload });
+        await actualizarMutate.mutateAsync({
+          id: selectedCliente.id,
+          data: payload,
+        });
       } else {
         await crearMutate.mutateAsync(payload);
       }
 
       closeModal();
     } catch (error) {
-      console.error('Error guardando cliente:', error);
-      alert(error.message || 'No se pudo guardar el cliente.');
+      console.error("Error guardando cliente:", error);
+      alert(error.message || "No se pudo guardar el cliente.");
     }
   };
 
@@ -161,9 +186,9 @@ export default function ClientesPage() {
         data: { ...cliente, estado: newEstado },
       });
 
-      console.log('Cliente actualizado exitosamente');
+      console.log("Cliente actualizado exitosamente");
     } catch (error) {
-      console.error('Error cambiando estado:', error);
+      console.error("Error cambiando estado:", error);
       alert(`Error al cambiar estado del cliente: ${error.message || error}`);
     }
   };
@@ -209,7 +234,10 @@ export default function ClientesPage() {
             />
             <input
               value={query}
-              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder="Buscar por NIT, nombre, teléfono o correo..."
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
@@ -222,25 +250,25 @@ export default function ClientesPage() {
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   NIT
                 </th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
-                  Nombre
-                </th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
-                  Responsable
+                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Empresa
                 </th>
                 <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Responsable
+                </th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Teléfono
                 </th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Correo
                 </th>
-                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
-                  Estado
-                </th>
                 <th className="w-[16%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Dirección
+                </th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Acciones
                 </th>
               </tr>
@@ -248,25 +276,28 @@ export default function ClientesPage() {
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
-                    >
-                      Cargando clientes...
-                    </td>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Cargando clientes...
+                  </td>
                 </tr>
               ) : clientesPaginados.length === 0 ? (
                 <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
-                    >
-                      No hay clientes para mostrar
-                    </td>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    No hay clientes para mostrar
+                  </td>
                 </tr>
               ) : (
                 clientesPaginados.map((cliente) => (
-                  <tr key={cliente.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                  <tr
+                    key={cliente.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center font-medium">
                       {cliente.nit}
                     </td>
@@ -274,51 +305,75 @@ export default function ClientesPage() {
                       {cliente.nombre}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
-                      {cliente.responsable || '-'}
+                      {cliente.responsable || "-"}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
-                      {cliente.telefono || '-'}
+                      {cliente.telefono ? (
+                        <a
+                          href={getWhatsAppUrl(cliente.telefono)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-green-500/40 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          title="Abrir chat en WhatsApp Web"
+                        >
+                          <MessageCircle size={14} />
+                          <span>{cliente.telefono}</span>
+                        </a>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all">
-                      {cliente.correo || '-'}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-center">
-                      <div className="flex justify-center">
-                        <Badge
-                          className={
-                            cliente.estado === false
-                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          }
+                      {cliente.correo ? (
+                        <a
+                          href={getGmailComposeUrl(cliente.correo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                          title="Enviar correo con Gmail"
                         >
-                          {cliente.estado === false ? 'Inactivo' : 'Activo'}
-                        </Badge>
-                      </div>
+                          <Mail size={14} />
+                          <span>{cliente.correo}</span>
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                      {cliente.direccion || "-"}
                     </td>
                     <td className="px-3 sm:px-4 py-3">
-                      <div className="flex flex-wrap justify-center gap-2">
+                      <div className="flex justify-center items-center">
+                        <button
+                          onClick={() => handleToggleState(cliente)}
+                          disabled={isMutating}
+                          className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            cliente.estado === false
+                              ? "bg-slate-300 dark:bg-slate-600"
+                              : "bg-green-500 dark:bg-green-600"
+                          }`}
+                          title={
+                            cliente.estado === false
+                              ? "Activar cliente"
+                              : "Desactivar cliente"
+                          }
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              cliente.estado === false
+                                ? "translate-x-1"
+                                : "translate-x-6"
+                            }`}
+                          />
+                        </button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => openModal(cliente)}
                           disabled={isMutating}
+                          className="ml-2"
                         >
                           Editar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleToggleState(cliente)}
-                          disabled={isMutating}
-                          className={
-                            cliente.estado === false
-                              ? 'border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20'
-                              : 'border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20'
-                          }
-                        >
-                          {cliente.estado === false
-                            ? 'Activar cliente'
-                            : 'Desactivar cliente'}
                         </Button>
                       </div>
                     </td>
@@ -328,11 +383,13 @@ export default function ClientesPage() {
             </tbody>
           </table>
         </div>
-        
+
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              Mostrando {((page - 1) * PAGE_SIZE) + 1} - {Math.min(page * PAGE_SIZE, clientesFiltrados.length)} de {clientesFiltrados.length}
+              Mostrando {(page - 1) * PAGE_SIZE + 1} -{" "}
+              {Math.min(page * PAGE_SIZE, clientesFiltrados.length)} de{" "}
+              {clientesFiltrados.length}
             </div>
             <div className="flex gap-2">
               <button
@@ -357,7 +414,7 @@ export default function ClientesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={selectedCliente ? 'Editar cliente' : 'Nuevo cliente'}
+        title={selectedCliente ? "Editar cliente" : "Nuevo cliente"}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -446,7 +503,7 @@ export default function ClientesPage() {
                   className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-amber-600 focus:ring-2 focus:ring-amber-500/20"
                 />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {form.estado ? 'Cliente activo' : 'Cliente inactivo'}
+                  {form.estado ? "Cliente activo" : "Cliente inactivo"}
                 </span>
               </label>
             </div>
@@ -480,8 +537,9 @@ export default function ClientesPage() {
 
 function ClientStatCard({ label, value, tone }) {
   const tones = {
-    green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    slate: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+    green:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    slate: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
   };
 
   return (
@@ -491,7 +549,9 @@ function ClientStatCard({ label, value, tone }) {
           <Users size={20} />
         </div>
         <div>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{label}</p>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+            {label}
+          </p>
           <p className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100">
             {value}
           </p>

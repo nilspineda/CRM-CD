@@ -17,6 +17,7 @@ import Input, { Select, Textarea } from "../../../components/ui/Input";
 import { clientesService } from "../../clientes/services/clientesService";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { facturasService } from "../services/facturasService";
+import { movimientosService } from "../../movimientos/services/movimientosService";
 import {
   formatCurrency,
   formatDate,
@@ -27,10 +28,13 @@ import {
 } from "../../../lib/utils";
 import { computeFacturaTaxes } from "../../../lib/utils";
 import { exportToExcel } from "../../../lib/exportExcel";
+import { FACTURAS_CONFIG } from "../../../lib/appConfig";
 import { useAuth } from "../../auth/AuthProvider";
 import { canPerform, PERMISSIONS } from "../../auth/permissions";
+import MovimientoLogsCard from "../../movimientos/components/MovimientoLogsCard";
 
 const PAGE_SIZE = 20;
+const LOGS_PAGE_SIZE = 50;
 
 const ESTADOS_FILTRO = [
   { value: "pendiente", label: "Pendiente" },
@@ -42,6 +46,9 @@ const PREFIJOS = [
   { value: "FE", label: "FE - Factura electrónica" },
   { value: "RM", label: "RM - Remisión" },
 ];
+
+const CUENTA_BANCOLOMBIA_OBJETIVO =
+  FACTURAS_CONFIG.CUENTA_AUTOMATICA_FE_NOMBRE;
 
 const emptyFacturaForm = {
   cliente_nit: "",
@@ -60,7 +67,7 @@ const emptyEstadoForm = {
 };
 
 export default function FacturasPage() {
-  const { access } = useAuth();
+  const { access, user, profile } = useAuth();
   const range = getDateRange("month");
   const currentMonth = formatDateInput(range.start).slice(0, 7);
   const [facturaModalOpen, setFacturaModalOpen] = useState(false);
@@ -72,6 +79,8 @@ export default function FacturasPage() {
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [errors, setErrors] = useState({});
   const [page, setPage] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsMonth, setLogsMonth] = useState(currentMonth);
   const [mesResumen, setMesResumen] = useState(currentMonth);
   const [filtros, setFiltros] = useState({
     fechaInicio: formatDateInput(range.start),
@@ -81,6 +90,7 @@ export default function FacturasPage() {
     ordenarPor: "fecha_creacion_desc",
   });
   const queryClient = useQueryClient();
+  const currentUserLabel = profile?.full_name || user?.email || "Sistema";
 
   const getMonthRange = (value) => {
     if (!value) return getDateRange("month");
@@ -112,10 +122,22 @@ export default function FacturasPage() {
     },
   });
 
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ["facturas", "logs", logsPage, logsMonth],
+    queryFn: () =>
+      movimientosService.getLogs({
+        page: logsPage,
+        pageSize: LOGS_PAGE_SIZE,
+        month: logsMonth,
+      }),
+    initialData: { data: [], count: 0 },
+  });
+
   const crearMutate = useMutation({
     mutationFn: facturasService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facturas"] });
+      queryClient.invalidateQueries({ queryKey: ["cuentas"] });
     },
   });
 
@@ -123,6 +145,7 @@ export default function FacturasPage() {
     mutationFn: ({ id, data }) => facturasService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facturas"] });
+      queryClient.invalidateQueries({ queryKey: ["cuentas"] });
     },
   });
 
@@ -148,6 +171,27 @@ export default function FacturasPage() {
     [cuentasData],
   );
 
+  const cuentaBancolombia = useMemo(() => {
+    const normalize = (text) =>
+      String(text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "");
+
+    const cuentaObjetivo = normalize(CUENTA_BANCOLOMBIA_OBJETIVO);
+
+    return (
+      cuentasData.find((cuenta) => {
+        const nombre = normalize(cuenta.nombre);
+        return (
+          nombre === cuentaObjetivo ||
+          (nombre.includes("bancolombia") && nombre.includes("30300001219"))
+        );
+      }) || null
+    );
+  }, [cuentasData]);
+
   const facturasEnriquecidas = useMemo(() => {
     return (facturasData || []).map((factura) => {
       const cliente = clientesMap.get(factura.cliente_nit);
@@ -165,6 +209,10 @@ export default function FacturasPage() {
     const start = (page - 1) * PAGE_SIZE;
     return facturasEnriquecidas.slice(start, start + PAGE_SIZE);
   }, [facturasEnriquecidas, page]);
+
+  const logs = logsData?.data || [];
+  const logsCount = logsData?.count || 0;
+  const logsTotalPages = Math.max(1, Math.ceil(logsCount / LOGS_PAGE_SIZE));
 
   const getFiltrosActivos = () => {
     const monthRange = getMonthRange(mesResumen || currentMonth);
@@ -272,9 +320,34 @@ export default function FacturasPage() {
     if (!canPerform(access, PERMISSIONS.FACTURAS_CHANGE_STATE)) return;
 
     try {
+      const esPagado = estadoForm.estado === "pagado";
+      const esRemision = selectedFactura.prefijo === "RM";
+      const esElectronica = selectedFactura.prefijo === "FE";
+
+      let cuentaId = selectedFactura.cuenta_id || null;
+
+      if (esPagado && esRemision) {
+        if (!estadoForm.cuenta_id) {
+          alert("Selecciona la cuenta para cargar el dinero de la remisión.");
+          return;
+        }
+        cuentaId = estadoForm.cuenta_id;
+      }
+
+      if (esPagado && esElectronica) {
+        if (!cuentaBancolombia?.id) {
+          alert(
+            `No se encontró la cuenta ${CUENTA_BANCOLOMBIA_OBJETIVO}. Crea o renombra esa cuenta para continuar.`,
+          );
+          return;
+        }
+        cuentaId = cuentaBancolombia.id;
+      }
+
       const payload = {
         ...selectedFactura,
         ...estadoForm,
+        cuenta_id: cuentaId,
         valor_total: selectedFactura.valor_total,
       };
       await actualizarMutate.mutateAsync({
@@ -329,6 +402,29 @@ export default function FacturasPage() {
   };
 
   const handlePageChange = (newPage) => setPage(newPage);
+  const handleLogsPageChange = (newPage) => setLogsPage(newPage);
+
+  const handleDownloadLogs = async () => {
+    if (!logsCount) return;
+
+    const { data } = await movimientosService.getLogs({
+      page: 1,
+      pageSize: Math.max(logsCount, 1),
+      month: logsMonth,
+    });
+
+    exportToExcel({
+      fileName: `logs-facturas-${logsMonth || currentMonth}`,
+      sheetName: "Logs",
+      columns: [
+        { header: "Fecha", value: (log) => log.created_at || log.fecha_hora || log.fecha || "" },
+        { header: "Usuario", value: (log) => log.usuario_email || log.user_email || log.usuario || log.user_name || log.created_by || currentUserLabel },
+        { header: "Acción", value: (log) => log.accion || log.action || log.tipo_accion || "Movimiento" },
+        { header: "Detalle", value: (log) => log.detalle || log.descripcion || log.observaciones || "Sin detalle" },
+      ],
+      rows: data || [],
+    });
+  };
 
   const isMutating = crearMutate.isPending || actualizarMutate.isPending;
   const canCreateFactura = canPerform(access, PERMISSIONS.FACTURAS_CREATE);
@@ -566,6 +662,25 @@ export default function FacturasPage() {
         )}
       </Card>
 
+      <MovimientoLogsCard
+        logs={logs}
+        loading={logsLoading || isLoading}
+        page={logsPage}
+        totalPages={logsTotalPages}
+        totalCount={logsCount}
+        pageSize={LOGS_PAGE_SIZE}
+        onPageChange={handleLogsPageChange}
+        selectedMonth={logsMonth}
+        onMonthChange={(month) => {
+          setLogsMonth(month);
+          setLogsPage(1);
+        }}
+        onDownload={handleDownloadLogs}
+        downloading={logsLoading}
+        currentUserLabel={currentUserLabel}
+        title="Logs de movimientos"
+      />
+
       <Modal
         isOpen={facturaModalOpen}
         onClose={closeFacturaModal}
@@ -745,6 +860,32 @@ export default function FacturasPage() {
               setEstadoForm((prev) => ({ ...prev, fecha_pago: e.target.value }))
             }
           />
+          {selectedFactura?.prefijo === "RM" && estadoForm.estado === "pagado" && (
+            <Select
+              label="Cuenta a cargar"
+              value={estadoForm.cuenta_id}
+              onChange={(e) =>
+                setEstadoForm((prev) => ({ ...prev, cuenta_id: e.target.value }))
+              }
+              required
+            >
+              <option value="">Seleccionar cuenta</option>
+              {cuentasData.map((cuenta) => (
+                <option key={cuenta.id} value={cuenta.id}>
+                  {cuenta.nombre}
+                </option>
+              ))}
+            </Select>
+          )}
+          {selectedFactura?.prefijo === "FE" && estadoForm.estado === "pagado" && (
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+              Factura electrónica: el dinero se cargará automáticamente a{" "}
+              <strong>
+                {cuentaBancolombia?.nombre || CUENTA_BANCOLOMBIA_OBJETIVO}
+              </strong>
+              .
+            </div>
+          )}
           <div className="text-sm text-slate-600 dark:text-slate-400">
             Valor:{" "}
             <strong>

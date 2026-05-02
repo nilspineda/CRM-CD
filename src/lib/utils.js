@@ -188,6 +188,10 @@ export const TIPO_MOVIMIENTO_LABELS = {
   "INSUMO PLOTTER": "insumo_plotter",
 };
 
+const CANONICAL_TIPOS_MOVIMIENTO = new Set(
+  Object.keys(TIPO_MOVIMIENTO_LABELS).filter((key) => /^[a-z0-9_]+$/.test(key)),
+);
+
 // Invertir mapeo para reconocer cuando la BD almacena la etiqueta legible
 const _invertLabels = Object.keys(TIPO_MOVIMIENTO_LABELS).reduce((acc, key) => {
   acc[TIPO_MOVIMIENTO_LABELS[key]] = key;
@@ -196,8 +200,19 @@ const _invertLabels = Object.keys(TIPO_MOVIMIENTO_LABELS).reduce((acc, key) => {
 
 export const normalizeTipoMovimiento = (valor) => {
   if (!valor) return valor;
-  if (TIPO_MOVIMIENTO_LABELS[valor]) return valor; // ya es clave
-  if (_invertLabels[valor]) return _invertLabels[valor]; // es etiqueta legible
+
+  if (CANONICAL_TIPOS_MOVIMIENTO.has(valor)) return valor;
+
+  const mapped = TIPO_MOVIMIENTO_LABELS[valor];
+  if (mapped && CANONICAL_TIPOS_MOVIMIENTO.has(mapped)) return mapped;
+
+  if (
+    _invertLabels[valor] &&
+    CANONICAL_TIPOS_MOVIMIENTO.has(_invertLabels[valor])
+  ) {
+    return _invertLabels[valor];
+  }
+
   return valor; // no conocido, devolver tal cual
 };
 
@@ -213,12 +228,17 @@ export const getEstadoLabel = (estado) => {
 
 export const getEstadoColor = (estado) => {
   const colors = {
-    pendiente: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-    pagado: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    pendiente:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+    pagado:
+      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     parcial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
     anulado: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
   };
-  return colors[estado] || "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+  return (
+    colors[estado] ||
+    "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+  );
 };
 
 export const getSumableIva = (movimiento) => {

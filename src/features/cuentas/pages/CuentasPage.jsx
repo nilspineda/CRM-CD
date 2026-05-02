@@ -7,23 +7,38 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import Badge from '../../../components/ui/Badge';
 import { cuentasService } from '../services/cuentasService';
-import { formatCurrency, getTipoCuentaLabel } from '../../../lib/utils';
+import { movimientosService } from '../../movimientos/services/movimientosService';
+import { formatCurrency, formatDateInput, getTipoCuentaLabel } from '../../../lib/utils';
 import { exportToExcel } from '../../../lib/exportExcel';
 import CuentaForm from '../components/CuentaForm';
+import MovimientoLogsCard from '../../movimientos/components/MovimientoLogsCard';
+import { useAuth } from '../../auth/AuthProvider';
 
 const PAGE_SIZE = 20;
+const LOGS_PAGE_SIZE = 50;
 
 export default function CuentasPage() {
+  const { user, profile } = useAuth();
+  const currentMonth = formatDateInput(new Date()).slice(0, 7);
   const [modalOpen, setModalOpen] = useState(false);
   const [cuentaEditando, setCuentaEditando] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [page, setPage] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsMonth, setLogsMonth] = useState(currentMonth);
   const queryClient = useQueryClient();
+  const currentUserLabel = profile?.full_name || user?.email || 'Sistema';
 
   const { data: cuentas = [], isLoading } = useQuery({
     queryKey: ['cuentas'],
     queryFn: cuentasService.getAll,
+  });
+
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ['cuentas', 'logs', logsPage, logsMonth],
+    queryFn: () => movimientosService.getLogs({ page: logsPage, pageSize: LOGS_PAGE_SIZE, month: logsMonth }),
+    initialData: { data: [], count: 0 },
   });
 
   const crearMutate = useMutation({
@@ -72,8 +87,17 @@ export default function CuentasPage() {
     return cuentasFiltradas.slice(start, start + PAGE_SIZE);
   }, [cuentasFiltradas, page]);
 
-  const cuentasActivas = useMemo(() => cuentas.filter(c => c.estado), [cuentas]);
-  const saldoTotal = useMemo(() => cuentasActivas.reduce((sum, c) => sum + (c.saldo_actual || 0), 0), [cuentasActivas]);
+  const totalCuentas = useMemo(() => cuentas.length, [cuentas]);
+  const getTotalCuenta = (cuenta) =>
+    (Number(cuenta?.saldo_inicial) || 0) + (Number(cuenta?.saldo_actual) || 0);
+  const saldoTotalCuentas = useMemo(
+    () => cuentas.reduce((sum, c) => sum + getTotalCuenta(c), 0),
+    [cuentas],
+  );
+
+  const logs = logsData?.data || [];
+  const logsCount = logsData?.count || 0;
+  const logsTotalPages = Math.max(1, Math.ceil(logsCount / LOGS_PAGE_SIZE));
 
   const handleSave = async (cuentaData) => {
     try {
@@ -134,6 +158,32 @@ export default function CuentasPage() {
     setPage(newPage);
   };
 
+  const handleLogsPageChange = (newPage) => {
+    setLogsPage(newPage);
+  };
+
+  const handleDownloadLogs = async () => {
+    if (!logsCount) return;
+
+    const { data } = await movimientosService.getLogs({
+      page: 1,
+      pageSize: Math.max(logsCount, 1),
+      month: logsMonth,
+    });
+
+    exportToExcel({
+      fileName: `logs-cuentas-${logsMonth || currentMonth}`,
+      sheetName: 'Logs',
+      columns: [
+        { header: 'Fecha', value: (log) => log.created_at || log.fecha_hora || log.fecha || '' },
+        { header: 'Usuario', value: (log) => log.usuario_email || log.user_email || log.usuario || log.user_name || log.created_by || currentUserLabel },
+        { header: 'Acción', value: (log) => log.accion || log.action || log.tipo_accion || 'Movimiento' },
+        { header: 'Detalle', value: (log) => log.detalle || log.descripcion || log.observaciones || 'Sin detalle' },
+      ],
+      rows: data || [],
+    });
+  };
+
   const isMutating = crearMutate.isPending || actualizarMutate.isPending || eliminarMutate.isPending || activarMutate.isPending;
 
   return (
@@ -156,15 +206,15 @@ export default function CuentasPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 w-full">
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
             <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
               <Wallet className="text-blue-600 dark:text-blue-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Total Cuentas</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">{cuentasActivas.length}</p>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Numero de Cuentas</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">{totalCuentas}</p>
             </div>
           </CardContent>
         </Card>
@@ -175,18 +225,7 @@ export default function CuentasPage() {
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Saldo Total</p>
-              <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">{formatCurrency(saldoTotal)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="w-full">
-          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">
-              <Wallet className="text-slate-600 dark:text-slate-400 w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Inactivas</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">{cuentas.length - cuentasActivas.length}</p>
+              <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">{formatCurrency(saldoTotalCuentas)}</p>
             </div>
           </CardContent>
         </Card>
@@ -208,7 +247,7 @@ export default function CuentasPage() {
             <select
               value={filtroEstado}
               onChange={(e) => { setFiltroEstado(e.target.value); setPage(1); }}
-              className="px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white dark:bg-slate-800 min-w-[140px]"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white dark:bg-slate-800 min-w-35"
             >
               <option value="todos">Todos</option>
               <option value="activa">Activas</option>
@@ -227,6 +266,7 @@ export default function CuentasPage() {
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Tipo</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Inicial</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Actual</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Total</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Estado</th>
                 <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Acciones</th>
               </tr>
@@ -234,13 +274,13 @@ export default function CuentasPage() {
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={7} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     Cargando...
                   </td>
                 </tr>
               ) : cuentasPaginadas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={7} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     No hay cuentas que mostrar
                   </td>
                 </tr>
@@ -269,6 +309,10 @@ export default function CuentasPage() {
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Actual:</span>
                       <span className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(cuenta.saldo_actual)}</span>
+                    </td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Total:</span>
+                      <span className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(getTotalCuenta(cuenta))}</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <Badge variant={cuenta.estado ? 'success' : 'default'}>
@@ -337,6 +381,25 @@ export default function CuentasPage() {
           </div>
         )}
       </Card>
+
+      <MovimientoLogsCard
+        logs={logs}
+        loading={logsLoading || isLoading}
+        page={logsPage}
+        totalPages={logsTotalPages}
+        totalCount={logsCount}
+        pageSize={LOGS_PAGE_SIZE}
+        onPageChange={handleLogsPageChange}
+        selectedMonth={logsMonth}
+        onMonthChange={(month) => {
+          setLogsMonth(month);
+          setLogsPage(1);
+        }}
+        onDownload={handleDownloadLogs}
+        downloading={logsLoading}
+        currentUserLabel={currentUserLabel}
+        title="Logs de movimientos"
+      />
 
       <Modal
         isOpen={modalOpen}

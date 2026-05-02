@@ -7,22 +7,37 @@ import {
   normalizeTipoMovimiento,
 } from "../../../lib/utils";
 import { computeFacturaTaxes } from "../../../lib/utils";
-import { TIPOS_MOVIMIENTO_BANCARIOS } from "../constants";
+import {
+  TIPOS_MOVIMIENTO_BANCARIOS,
+  TIPOS_MOVIMIENTO_BANCARIOS_VALUES,
+} from "../constants";
 
-const normalizeMovimiento = (movimiento) => ({
-  ...movimiento,
-  descripcion:
-    movimiento.descripcion?.trim() ||
-    movimiento.observaciones?.trim() ||
-    movimiento.tipo_movimiento ||
-    "Movimiento financiero",
-  categoria_id: movimiento.categoria_id || null,
-  cliente_proveedor: movimiento.cliente_proveedor || null,
-  observaciones: movimiento.observaciones || null,
-  valor_total: Number(movimiento.valor_total) || 0,
-  estado: movimiento.estado || "pendiente",
-  updated_at: movimiento.updated_at || new Date().toISOString(),
-});
+const TIPOS_PERMITIDOS_SET = new Set(TIPOS_MOVIMIENTO_BANCARIOS_VALUES);
+
+const normalizeMovimiento = (movimiento) => {
+  const tipoNormalizado = normalizeTipoMovimiento(movimiento.tipo_movimiento);
+
+  if (!TIPOS_PERMITIDOS_SET.has(tipoNormalizado)) {
+    throw new Error(
+      `Tipo de movimiento invalido para guardar: ${movimiento.tipo_movimiento}`,
+    );
+  }
+
+  return {
+    ...movimiento,
+    tipo_movimiento: tipoNormalizado,
+    descripcion:
+      movimiento.observaciones?.trim() ||
+      tipoNormalizado ||
+      "Movimiento financiero",
+    categoria_id: movimiento.categoria_id || null,
+    cliente_proveedor: movimiento.cliente_proveedor || null,
+    observaciones: movimiento.observaciones || null,
+    valor_total: Number(movimiento.valor_total) || 0,
+    estado: movimiento.estado || "pendiente",
+    updated_at: movimiento.updated_at || new Date().toISOString(),
+  };
+};
 
 const getMovimientoImpacto = (movimiento) => {
   if (!movimiento || movimiento.estado !== "pagado") return 0;
@@ -51,6 +66,37 @@ const applyCuentaImpacto = async (cuentaId, impacto) => {
     .eq("id", cuentaId);
 
   if (error) throw error;
+};
+
+const getMonthRange = (month) => {
+  if (!month) return null;
+
+  const [year, monthIndex] = String(month).split("-").map(Number);
+  if (!year || !monthIndex) return null;
+
+  const start = new Date(year, monthIndex - 1, 1);
+  const end = new Date(year, monthIndex, 1);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+};
+
+const buildLogsQuery = ({ month, page = 1, pageSize = 30, dateColumn = "created_at" }) => {
+  let query = supabase.from("movimientos_financieros_logs").select("*", {
+    count: "exact",
+  });
+
+  const range = getMonthRange(month);
+  if (range) {
+    query = query.gte(dateColumn, range.start).lt(dateColumn, range.end);
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  return query.order(dateColumn, { ascending: false }).range(from, to);
 };
 
 export const movimientosService = {
@@ -275,24 +321,22 @@ export const movimientosService = {
     });
   },
 
-  async getLogs({ page = 1, pageSize = 30 } = {}) {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    const buildQuery = () =>
-      supabase
-        .from("movimientos_financieros_logs")
-        .select("*", { count: "exact" });
-
-    let result = await buildQuery()
-      .order("created_at", { ascending: false })
-      .range(from, to);
+  async getLogs(options = {}) {
+    let result = await buildLogsQuery({
+      month: options.month,
+      page: options.page ?? 1,
+      pageSize: options.pageSize ?? 30,
+      dateColumn: "created_at",
+    });
 
     // Compatibilidad por si la columna de fecha del log se llama distinto.
     if (result.error?.code === "42703") {
-      result = await buildQuery()
-        .order("fecha_hora", { ascending: false })
-        .range(from, to);
+      result = await buildLogsQuery({
+        month: options.month,
+        page: options.page ?? 1,
+        pageSize: options.pageSize ?? 30,
+        dateColumn: "fecha_hora",
+      });
     }
 
     if (result.error) throw result.error;

@@ -61,6 +61,23 @@ const ajustarCuenta = async (cuentaId, impacto) => {
   if (error) throw error;
 };
 
+const sanitizeFacturaPayload = (factura = {}) => {
+  const payload = {
+    cliente_nit: factura.cliente_nit ?? null,
+    prefijo: factura.prefijo ?? null,
+    numero_factura: factura.numero_factura ?? null,
+    fecha_creacion: factura.fecha_creacion ?? null,
+    fecha_pago: factura.fecha_pago ?? null,
+    valor_total:
+      factura.valor_total == null ? null : Number(factura.valor_total) || 0,
+    estado: factura.estado ?? null,
+    observaciones: factura.observaciones ?? null,
+    cuenta_id: factura.cuenta_id ?? null,
+  };
+
+  return payload;
+};
+
 export const facturasService = {
   async getAll(filtros = {}) {
     let query = supabase
@@ -98,7 +115,7 @@ export const facturasService = {
 
   async create(factura) {
     const payload = {
-      ...factura,
+      ...sanitizeFacturaPayload(factura),
       fecha_creacion: factura.fecha_creacion || hoy(),
       estado: factura.estado || "pendiente",
       observaciones: factura.observaciones || null,
@@ -119,7 +136,7 @@ export const facturasService = {
   async update(id, factura) {
     const anterior = await this.getById(id);
     const payload = {
-      ...factura,
+      ...sanitizeFacturaPayload(factura),
       observaciones: factura.observaciones || null,
       cuenta_id: factura.cuenta_id || null,
       updated_at: new Date().toISOString(),

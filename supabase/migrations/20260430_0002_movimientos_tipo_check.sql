@@ -23,10 +23,7 @@ ALTER TABLE movimientos_financieros
 ADD CONSTRAINT movimientos_financieros_tipo_movimiento_check
 CHECK (
     tipo_movimiento IN (
-        -- Ingresos
-        'factura_venta',
-        'pago_factura_electronica',
-        'pago_facturas_remision',
+      
         -- Impuestos
         'pago_iva',
         'pago_ica',
