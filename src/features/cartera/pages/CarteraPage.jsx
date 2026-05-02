@@ -85,6 +85,7 @@ export default function CarteraPage() {
         dias_restantes: diasRestantes,
         vencida,
         valor_pendiente: valorPendiente,
+        valor_abonado: factura.estado === "pago_parcial" ? (Number(factura.valor_pagado) || 0) : 0,
         fecha_objetivo: fechaObjetivo
       };
     });
@@ -221,21 +222,22 @@ export default function CarteraPage() {
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
                 <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Factura</th>
-                <th className="w-[20%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Cliente</th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Fecha Pago</th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Días Restantes</th>
-                <th className="w-[15%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Valor Pendiente</th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Acción</th>
+                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Cliente</th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Próximo Pago</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Días</th>
+                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Abonado</th>
+                <th className="w-[12%] px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Pendiente</th>
+                <th className="w-[17%] px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Acción</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">Cargando cartera...</td>
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">Cargando cartera...</td>
                 </tr>
               ) : carteraEnriquecida.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">No hay facturas pendientes en cartera</td>
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">No hay facturas pendientes en cartera</td>
                 </tr>
               ) : (
                 carteraEnriquecida.map((factura) => {
@@ -269,23 +271,45 @@ export default function CarteraPage() {
                         <div className="text-xs text-slate-500 truncate">{factura.cliente_nit}</div>
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
-                        {formatDate(factura.fecha_objetivo)}
+                        {factura.fecha_objetivo ? (
+                          <div>
+                            <div>{formatDate(factura.fecha_objetivo)}</div>
+                            {factura.estado === "pago_parcial" && (
+                              <div className="text-xs text-amber-500 dark:text-amber-400 mt-0.5">próximo pago</div>
+                            )}
+                          </div>
+                        ) : <span className="text-slate-400">—</span>}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-center">
                         {factura.dias_restantes === null ? (
                           <span className="text-sm text-slate-400">-</span>
                         ) : factura.vencida ? (
-                          <div className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 text-sm font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                            <AlertCircle size={14} />
-                            Vencida ({Math.abs(factura.dias_restantes)} d)
+                          <div className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 text-xs font-semibold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full">
+                            <AlertCircle size={12} />
+                            {Math.abs(factura.dias_restantes)}d vencida
                           </div>
+                        ) : factura.dias_restantes <= 3 ? (
+                          <span className="inline-flex text-xs font-bold px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                            ⚠ {factura.dias_restantes}d
+                          </span>
                         ) : (
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            {factura.dias_restantes} días
+                          <span className="inline-flex text-xs font-semibold px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                            {factura.dias_restantes}d
                           </span>
                         )}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
+                      {/* Abonado */}
+                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
+                        {factura.valor_abonado > 0 ? (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            {formatCurrency(factura.valor_abonado)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      {/* Pendiente */}
+                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-red-600 dark:text-red-400">
                         {formatCurrency(factura.valor_pendiente)}
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-center">

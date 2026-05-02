@@ -35,6 +35,7 @@ import { canPerform, PERMISSIONS } from "../../auth/permissions";
 import MovimientoLogsCard from "../../movimientos/components/MovimientoLogsCard";
 import CambiarEstadoModal from "../components/CambiarEstadoModal";
 import FacturaModal from "../components/FacturaModal";
+import FacturaDetalleModal from "../components/FacturaDetalleModal";
 
 const PAGE_SIZE = 20;
 const LOGS_PAGE_SIZE = 50;
@@ -50,8 +51,8 @@ const PREFIJOS = [
   { value: "RM", label: "RM - Remisión" },
 ];
 
-const CUENTA_BANCOLOMBIA_OBJETIVO =
-  FACTURAS_CONFIG.CUENTA_AUTOMATICA_FE_NOMBRE;
+const CUENTA_BANCOLOMBIA_OBJETIVO = FACTURAS_CONFIG.CUENTA_AUTOMATICA_FE_NOMBRE;
+const CUENTA_BANCOLOMBIA_FRAGMENTO = FACTURAS_CONFIG.CUENTA_AUTOMATICA_FE_FRAGMENTO;
 
 const emptyFacturaForm = {
   cliente_nit: "",
@@ -84,6 +85,7 @@ export default function FacturasPage() {
 
   const [facturaModalOpen, setFacturaModalOpen] = useState(false);
   const [estadoModalOpen, setEstadoModalOpen] = useState(false);
+  const [detalleModalOpen, setDetalleModalOpen] = useState(false);
   const [selectedFactura, setSelectedFactura] = useState(null);
 
   const queryClient = useQueryClient();
@@ -170,19 +172,13 @@ export default function FacturasPage() {
     const normalize = (text) =>
       String(text || "")
         .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]/g, "");
-
-    const cuentaObjetivo = normalize(CUENTA_BANCOLOMBIA_OBJETIVO);
-
+    const fragmento = normalize(CUENTA_BANCOLOMBIA_FRAGMENTO);
+    const nombreObjetivo = normalize(CUENTA_BANCOLOMBIA_OBJETIVO);
     return (
       cuentasData.find((cuenta) => {
         const nombre = normalize(cuenta.nombre);
-        return (
-          nombre === cuentaObjetivo ||
-          (nombre.includes("bancolombia") && nombre.includes("30300001219"))
-        );
+        return nombre === nombreObjetivo || nombre.includes(fragmento);
       }) || null
     );
   }, [cuentasData]);
@@ -491,6 +487,9 @@ export default function FacturasPage() {
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Valor
                 </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+                  Pendiente
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
                   Estado
                 </th>
@@ -503,7 +502,7 @@ export default function FacturasPage() {
               {isLoading || clientesLoading || cuentasLoading ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     Cargando...
@@ -512,7 +511,7 @@ export default function FacturasPage() {
               ) : facturasPaginadas.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay facturas para mostrar
@@ -526,8 +525,16 @@ export default function FacturasPage() {
                       key={factura.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-700 dark:bg-slate-800"
                     >
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
-                        {factura.prefijo}-{factura.numero_factura}
+                      <td className="px-3 sm:px-4 py-3 text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setSelectedFactura(factura);
+                            setDetalleModalOpen(true);
+                          }}
+                          className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline font-medium transition-colors"
+                        >
+                          {factura.prefijo}-{factura.numero_factura}
+                        </button>
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         {formatDate(factura.fecha_pago)}
@@ -552,6 +559,23 @@ export default function FacturasPage() {
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(factura.valor_total)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
+                        {factura.estado === "pagado" ? (
+                          <span className="text-green-600 dark:text-green-400">—</span>
+                        ) : factura.estado === "pago_parcial" ? (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            {formatCurrency(
+                              Math.max(0, (factura.valor_total || 0) - (factura.valor_pagado || 0))
+                            )}
+                          </span>
+                        ) : factura.estado === "anulado" ? (
+                          <span className="text-slate-400">—</span>
+                        ) : (
+                          <span className="text-red-600 dark:text-red-400">
+                            {formatCurrency(factura.valor_total)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 sm:px-4 py-3">
                         <span
@@ -645,6 +669,14 @@ export default function FacturasPage() {
       <CambiarEstadoModal
         isOpen={estadoModalOpen}
         onClose={closeEstadoModal}
+        factura={selectedFactura}
+      />
+      <FacturaDetalleModal
+        isOpen={detalleModalOpen}
+        onClose={() => {
+          setDetalleModalOpen(false);
+          setSelectedFactura(null);
+        }}
         factura={selectedFactura}
       />
     </div>

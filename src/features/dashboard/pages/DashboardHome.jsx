@@ -1,6 +1,6 @@
 // filepath: src/features/dashboard/pages/DashboardHome.jsx
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   TrendingUp,
   TrendingDown,
@@ -10,6 +10,7 @@ import {
   Clock,
   ArrowRight,
   Download,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -111,6 +112,7 @@ const DashboardTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardHome() {
+  const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState("");
 
   const getMonthRange = (monthStr) => {
@@ -142,8 +144,10 @@ export default function DashboardHome() {
   const anioResumen = getYearRange(selectedMonth);
 
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
-    queryKey: ["cuentas", "activas"],
-    queryFn: cuentasService.getActivas,
+    queryKey: ["cuentas", "todas"],
+    queryFn: cuentasService.getAll,
+    // Refetch every 30 seconds for near real-time balance
+    refetchInterval: 30000,
   });
 
   const { data: movimientosData = [], isLoading: movimientosLoading } =
@@ -202,16 +206,17 @@ export default function DashboardHome() {
 
   const monthlyChartData = useMemo(() => {
     const months = buildMonthlyChart(movimientosData);
-    const year = Number(selectedMonth.split("-")[0]);
-    [...(facturasData || [])].forEach((f) => {
-      const date = new Date(`${f.fecha_creacion}T00:00:00`);
-      if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
-      const monthIndex = date.getMonth();
-      const valor = Math.abs(f.valor_total || 0);
-      months[monthIndex].Ingresos += valor;
-    });
+    if (selectedMonth) {
+      const year = Number(selectedMonth.split("-")[0]);
+      ;[...(facturasData || [])].forEach((f) => {
+        const date = new Date(`${f.fecha_creacion}T00:00:00`);
+        if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
+        const monthIndex = date.getMonth();
+        months[monthIndex].Ingresos += Math.abs(f.valor_total || 0);
+      });
+    }
     return months;
-  }, [movimientosData, facturasData]);
+  }, [movimientosData, facturasData, selectedMonth]);
 
   const accountsChartData = useMemo(
     () => buildAccountsChart(cuentasData),
@@ -291,7 +296,7 @@ export default function DashboardHome() {
             Resumen financiero {selectedMonth ? `(${selectedMonth})` : "(Histórico total)"}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <input
               type="month"
@@ -308,10 +313,23 @@ export default function DashboardHome() {
               </button>
             )}
           </div>
-          <Button variant="outline" onClick={handleExport} className="shrink-0 w-full sm:w-auto">
-            <Download size={16} className="mr-1 sm:mr-2" />
-            Excel
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["cuentas"] });
+                queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+              }}
+              className="shrink-0"
+              title="Actualizar saldos"
+            >
+              <RefreshCw size={15} />
+            </Button>
+            <Button variant="outline" onClick={handleExport} className="shrink-0 w-full sm:w-auto">
+              <Download size={16} className="mr-1 sm:mr-2" />
+              Excel
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -512,20 +530,33 @@ export default function DashboardHome() {
                   No hay cuentas registradas
                 </p>
               ) : (
-                cuentasData.map((cuenta) => (
+                cuentasData
+                  .sort((a, b) => (b.saldo_actual || 0) - (a.saldo_actual || 0))
+                  .map((cuenta) => (
                   <div
                     key={cuenta.id}
-                    className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
+                    className={`flex items-center justify-between p-3 sm:p-4 rounded-lg ${
+                      cuenta.estado === false
+                        ? "bg-slate-50/50 dark:bg-slate-700/20 opacity-60"
+                        : "bg-slate-50 dark:bg-slate-700/50"
+                    }`}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">
                         {cuenta.nombre}
+                        {cuenta.estado === false && (
+                          <span className="ml-2 text-xs text-slate-400">(inactiva)</span>
+                        )}
                       </p>
                       <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 capitalize">
                         {cuenta.tipo_cuenta?.replace("_", " ")}
                       </p>
                     </div>
-                    <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm sm:text-base shrink-0 ml-2">
+                    <p className={`font-semibold text-sm sm:text-base shrink-0 ml-2 ${
+                      (cuenta.saldo_actual || 0) < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-slate-800 dark:text-slate-100"
+                    }`}>
                       {formatCurrency(cuenta.saldo_actual)}
                     </p>
                   </div>

@@ -264,7 +264,6 @@ export default function CuentasPage() {
               <tr>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Nombre</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Tipo</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Inicial</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Saldo Actual</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Total</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Estado</th>
@@ -274,7 +273,7 @@ export default function CuentasPage() {
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     Cargando...
                   </td>
                 </tr>
@@ -301,10 +300,6 @@ export default function CuentasPage() {
                         <span className="sm:hidden mr-1">📁</span>
                         {getTipoCuentaLabel(cuenta.tipo_cuenta)}
                       </span>
-                    </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Inicial:</span>
-                      <span className="text-sm sm:text-base text-slate-800 dark:text-slate-100">{formatCurrency(cuenta.saldo_inicial)}</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className="sm:hidden text-xs text-slate-500 dark:text-slate-400 mr-1">Actual:</span>
