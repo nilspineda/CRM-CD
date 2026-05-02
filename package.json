@@ -16,6 +16,7 @@
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-is": "^19.0.0",
     "react-router-dom": "^7.14.2",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.2.4"
@@ -32,6 +33,7 @@
     "globals": "^17.5.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }
