@@ -146,13 +146,11 @@ export default function DashboardHome() {
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
     queryKey: ["cuentas", "todas"],
     queryFn: cuentasService.getAll,
-    // Refetch every 30 seconds for near real-time balance
-    refetchInterval: 30000,
   });
 
   const { data: movimientosData = [], isLoading: movimientosLoading } =
     useQuery({
-      queryKey: ["movimientos", anioResumen],
+      queryKey: ["movimientos", anioResumen.start.toISOString(), anioResumen.end.toISOString()],
       queryFn: () =>
         movimientosService.getAll({
           fechaInicio: anioResumen.start.toISOString().split("T")[0],
@@ -179,22 +177,7 @@ export default function DashboardHome() {
       ),
   });
 
-  const { data: facturasData = [], isLoading: facturasLoading } = useQuery({
-    queryKey: ["facturas", "anio", anioResumen],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("facturas")
-        .select("fecha_creacion, valor_total, estado")
-        .gte("fecha_creacion", anioResumen.start.toISOString().split("T")[0])
-        .lte("fecha_creacion", anioResumen.end.toISOString().split("T")[0])
-        .eq("estado", "pagado");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const loading =
-    cuentasLoading || movimientosLoading || statsLoading || facturasLoading;
+  const loading = cuentasLoading || movimientosLoading || statsLoading;
 
   const movimientosRecientes = useMemo(
     () => movimientosData.slice(0, 6),
@@ -213,17 +196,10 @@ export default function DashboardHome() {
 
   const monthlyChartData = useMemo(() => {
     const months = buildMonthlyChart(movimientosData);
-    if (selectedMonth) {
-      const year = Number(selectedMonth.split("-")[0]);
-      [...(facturasData || [])].forEach((f) => {
-        const date = new Date(`${f.fecha_creacion}T00:00:00`);
-        if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) return;
-        const monthIndex = date.getMonth();
-        months[monthIndex].Ingresos += Math.abs(f.valor_total || 0);
-      });
-    }
+    // Nota: Las facturas pagadas ya vienen en movimientosData como tipo factura_venta (pagadas) 
+    // así que no necesitamos sumar facturas separadas aquí si se maneja correctamente en movimientos.
     return months;
-  }, [movimientosData, facturasData, selectedMonth]);
+  }, [movimientosData]);
 
   const accountsChartData = useMemo(
     () => buildAccountsChart(cuentasData),
@@ -444,7 +420,7 @@ export default function DashboardHome() {
               Ingresos y gastos por mes
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-80 sm:h-96">
+          <CardContent className="h-64 sm:h-80 md:h-96">
             {monthlyChartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
                 No hay datos suficientes para graficar el año en curso.
@@ -455,17 +431,21 @@ export default function DashboardHome() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: "#64748b", fontSize: 12 }}
+                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    interval={0}
+                    angle={-45}
+                    textAnchor="end"
+                    height={50}
                   />
-                  <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
                   <Tooltip content={<DashboardTooltip />} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar
                     dataKey="Ingresos"
                     fill="#f59e0b"
-                    radius={[6, 6, 0, 0]}
+                    radius={[4, 4, 0, 0]}
                   />
-                  <Bar dataKey="Egresos" fill="#dc2626" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Egresos" fill="#dc2626" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -486,7 +466,7 @@ export default function DashboardHome() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="h-80 sm:h-96">
+          <CardContent className="h-64 sm:h-80 md:h-96">
             {accountsChartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
                 No hay cuentas activas para mostrar.
@@ -501,21 +481,21 @@ export default function DashboardHome() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis
                     type="number"
-                    tick={{ fill: "#64748b", fontSize: 12 }}
+                    tick={{ fill: "#64748b", fontSize: 11 }}
                   />
                   <YAxis
                     dataKey="name"
                     type="category"
-                    width={120}
-                    tick={{ fill: "#64748b", fontSize: 12 }}
+                    width={80}
+                    tick={{ fill: "#64748b", fontSize: 11 }}
                   />
                   <Tooltip content={<DashboardTooltip />} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar
                     dataKey="saldo"
                     name="Saldo"
                     fill="#f59e0b"
-                    radius={[0, 6, 6, 0]}
+                    radius={[0, 4, 4, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -673,52 +653,60 @@ export default function DashboardHome() {
 
       {/* Quick actions */}
       <Card className="w-full">
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-3 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3 sm:mb-4">
             Acciones rápidas
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <Link
               to="/movimientos"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:bg-slate-200"
             >
-              <FileText
-                size={20}
-                className="text-amber-600 dark:text-amber-400"
-              />
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <FileText
+                  size={18}
+                  className="text-amber-600 dark:text-amber-400"
+                />
+              </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Nuevo Movimiento
               </span>
             </Link>
             <Link
               to="/cuentas"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:bg-slate-200"
             >
-              <Wallet
-                size={20}
-                className="text-amber-600 dark:text-amber-400"
-              />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Wallet
+                  size={18}
+                  className="text-blue-600 dark:text-blue-400"
+                />
+              </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Ver Cuentas
               </span>
             </Link>
             <Link
               to="/cartera"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:bg-slate-200"
             >
-              <Clock size={20} className="text-amber-600 dark:text-amber-400" />
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Clock size={18} className="text-orange-600 dark:text-orange-400" />
+              </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Cartera
               </span>
             </Link>
             <Link
               to="/reportes"
-              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:bg-slate-200"
             >
-              <DollarSign
-                size={20}
-                className="text-amber-600 dark:text-amber-400"
-              />
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <DollarSign
+                  size={18}
+                  className="text-green-600 dark:text-green-400"
+                />
+              </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Reporte IVA
               </span>

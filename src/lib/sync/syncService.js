@@ -88,11 +88,15 @@ export function isOnline() {
 }
 
 export function onConnectionChange(callback) {
-  window.addEventListener('online', () => callback(true));
-  window.addEventListener('offline', () => callback(false));
-  
+  // Guardar referencias para poder removerlas correctamente en el cleanup
+  const onOnline = () => callback(true);
+  const onOffline = () => callback(false);
+
+  window.addEventListener('online', onOnline);
+  window.addEventListener('offline', onOffline);
+
   return () => {
-    window.removeEventListener('online', () => callback(true));
-    window.removeEventListener('offline', () => callback(false));
+    window.removeEventListener('online', onOnline);
+    window.removeEventListener('offline', onOffline);
   };
 }

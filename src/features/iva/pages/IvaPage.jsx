@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Calculator,
   TrendingDown,
@@ -23,31 +24,15 @@ import { exportToExcel } from "../../../lib/exportExcel";
 
 export default function IvaPage() {
   const range = getDateRange("month");
-  const [loading, setLoading] = useState(true);
-  const [movimientos, setMovimientos] = useState([]);
   const [filtros, setFiltros] = useState({
     fechaInicio: range.start.toISOString().split("T")[0],
     fechaFin: range.end.toISOString().split("T")[0],
   });
 
-  useEffect(() => {
-    loadIva();
-  }, [filtros]);
-
-  const loadIva = async () => {
-    try {
-      setLoading(true);
-      const data = await movimientosService.getIva(
-        filtros.fechaInicio,
-        filtros.fechaFin,
-      );
-      setMovimientos(data);
-    } catch (error) {
-      console.error("Error cargando IVA:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: movimientos = [], isLoading: loading } = useQuery({
+    queryKey: ["iva", filtros.fechaInicio, filtros.fechaFin],
+    queryFn: () => movimientosService.getIva(filtros.fechaInicio, filtros.fechaFin),
+  });
 
   const resumen = useMemo(() => {
     return movimientos.reduce(

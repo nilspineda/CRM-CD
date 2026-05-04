@@ -100,8 +100,8 @@ export default function FacturasPage() {
   };
 
   const { data: clientesData = [], isLoading: clientesLoading } = useQuery({
-    queryKey: ["clientes"],
-    queryFn: clientesService.getAll,
+    queryKey: ["clientes", "minimal"],
+    queryFn: clientesService.getMinimal,
   });
 
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
@@ -459,7 +459,7 @@ export default function FacturasPage() {
       </Card>
 
       <Card className="w-full overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mobile-card-table">
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
@@ -525,7 +525,7 @@ export default function FacturasPage() {
                       key={factura.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-700 dark:bg-slate-800"
                     >
-                      <td className="px-3 sm:px-4 py-3 text-sm font-medium">
+                      <td data-label="Número" className="px-3 sm:px-4 py-3 text-sm font-medium">
                         <button
                           onClick={() => {
                             setSelectedFactura(factura);
@@ -536,31 +536,31 @@ export default function FacturasPage() {
                           {factura.prefijo}-{factura.numero_factura}
                         </button>
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      <td data-label="Fecha" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         {formatDate(factura.fecha_pago)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      <td data-label="Cliente" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         <div>{factura.cliente_nit}</div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
                           {factura.cliente_nombre}
                         </div>
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
+                      <td data-label="Base" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.base)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
+                      <td data-label="ICA" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.ica)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
+                      <td data-label="IVA" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(taxes.iva)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-left">
+                      <td data-label="Cuenta" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-left">
                         {factura.cuenta_nombre || <span className="text-slate-400 dark:text-slate-500 italic">No asignada</span>}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
+                      <td data-label="Valor" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-right font-medium">
                         {formatCurrency(factura.valor_total)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
+                      <td data-label="Pendiente" className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
                         {factura.estado === "pagado" ? (
                           <span className="text-green-600 dark:text-green-400">—</span>
                         ) : factura.estado === "pago_parcial" ? (
@@ -577,14 +577,14 @@ export default function FacturasPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 sm:px-4 py-3">
+                      <td data-label="Estado" className="px-3 sm:px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(factura.estado)}`}
                         >
                           {getEstadoLabel(factura.estado)}
                         </span>
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-right">
+                      <td data-label="Acciones" className="px-3 sm:px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
                           {canChangeFacturaState && (
                             <button

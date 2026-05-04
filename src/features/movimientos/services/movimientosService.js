@@ -118,10 +118,9 @@ export const movimientosService = {
     return todosTipos;
   },
 
-  // Obtener todos los movimientos con filtros
   async getAll(filtros = {}) {
     let query = supabase.from("movimientos_financieros").select(`
-        *,
+        id, fecha, tipo_movimiento, descripcion, valor_base, valor_total, valor_iva, incluye_iva, porcentaje_iva, estado, cuenta_id, cliente_proveedor, categoria_id, observaciones,
         cuentas_financieras(nombre)
       `);
 
@@ -302,11 +301,10 @@ export const movimientosService = {
     return stats;
   },
 
-  // Obtener movimientos por cuenta
   async getByCuenta(cuentaId) {
     const { data, error } = await supabase
       .from("movimientos_financieros")
-      .select("*")
+      .select("id, fecha, tipo_movimiento, descripcion, valor_total, estado, cuenta_id, cliente_proveedor")
       .eq("cuenta_id", cuentaId)
       .order("fecha", { ascending: false });
 

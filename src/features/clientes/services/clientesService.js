@@ -4,8 +4,18 @@ export const clientesService = {
   async getAll() {
     const { data, error } = await supabase
       .from("clientes")
-      .select("*")
+      .select("id,nit,nombre,telefono,correo,responsable,direccion,estado,fecha_cumpleaños,observaciones,updated_at")
       .order("nombre");
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Versión ligera: solo los campos necesarios para enricher facturas en CarteraPage
+  async getMinimal() {
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("nit,nombre,telefono");
 
     if (error) throw error;
     return data || [];

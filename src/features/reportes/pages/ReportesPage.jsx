@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   DollarSign,
@@ -125,35 +126,25 @@ export default function ReportesPage() {
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [loading, setLoading] = useState(false);
   const [loadingExport, setLoadingExport] = useState(false);
-  const [movimientos, setMovimientos] = useState([]);
-  const [facturas, setFacturas] = useState([]);
-
+  
   // Años disponibles: 3 años atrás hasta hoy
   const years = Array.from({ length: 4 }, (_, i) => currentYear - 3 + i).reverse();
   const mesesDisponibles = Array.from({ length: 12 }, (_, i) => i);
 
-  // ── Cargar datos del mes seleccionado ──
-  useEffect(() => {
-    const range = monthRange(selectedYear, selectedMonth);
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [movs, facts] = await Promise.all([
-          movimientosService.getReporteFinanciero(range.start, range.end),
-          facturasService.getAll({ fechaInicio: range.start, fechaFin: range.end }),
-        ]);
-        setMovimientos(movs);
-        setFacturas(facts);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [selectedYear, selectedMonth]);
+  const range = useMemo(() => monthRange(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
+
+  const { data: movimientos = [], isLoading: movimientosLoading } = useQuery({
+    queryKey: ["reportes", "movimientos", range.start, range.end],
+    queryFn: () => movimientosService.getReporteFinanciero(range.start, range.end),
+  });
+
+  const { data: facturas = [], isLoading: facturasLoading } = useQuery({
+    queryKey: ["reportes", "facturas", range.start, range.end],
+    queryFn: () => facturasService.getAll({ fechaInicio: range.start, fechaFin: range.end }),
+  });
+
+  const loading = movimientosLoading || facturasLoading;
 
   // ── Resumen del mes ──
   const reporte = useMemo(() => {

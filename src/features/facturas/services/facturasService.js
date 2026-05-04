@@ -85,7 +85,9 @@ export const facturasService = {
   async getAll(filtros = {}) {
     let query = supabase
       .from("facturas")
-      .select("*")
+      .select(
+        "id,cliente_nit,prefijo,numero_factura,fecha_creacion,fecha_pago,fecha_proximo_pago,valor_total,valor_pagado,estado,observaciones,cuenta_id,updated_at"
+      )
       .order("fecha_creacion", { ascending: false });
 
     if (filtros.fechaInicio)

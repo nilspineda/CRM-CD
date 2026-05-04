@@ -40,8 +40,9 @@ export default function CarteraPage() {
   });
 
   const { data: clientesData = [], isLoading: clientesLoading } = useQuery({
-    queryKey: ["clientes"],
-    queryFn: clientesService.getAll,
+    queryKey: ["clientes", "minimal"],
+    queryFn: clientesService.getMinimal,
+    staleTime: 10 * 60 * 1000, // clientes cambian poco, cachear 10 min
   });
 
   const clientesMap = useMemo(() => {
@@ -234,7 +235,7 @@ export default function CarteraPage() {
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mobile-card-table">
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
             <thead className="bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
               <tr>
@@ -288,7 +289,7 @@ export default function CarteraPage() {
                       key={factura.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-700"
                     >
-                      <td className="px-3 sm:px-4 py-3 text-sm font-medium">
+                      <td data-label="Factura" className="px-3 sm:px-4 py-3 text-sm font-medium">
                         <div className="flex items-center gap-2">
                           {/* Número clickeable → abre resumen */}
                           <button
@@ -332,7 +333,7 @@ export default function CarteraPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      <td data-label="Cliente" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                         <div className="font-medium truncate">
                           {factura.cliente_nombre}
                         </div>
@@ -340,7 +341,7 @@ export default function CarteraPage() {
                           {factura.cliente_nit}
                         </div>
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                      <td data-label="Próximo Pago" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                         {factura.fecha_objetivo ? (
                           <div>
                             <div>{formatDate(factura.fecha_objetivo)}</div>
@@ -354,7 +355,7 @@ export default function CarteraPage() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-center">
+                      <td data-label="Días" className="px-3 sm:px-4 py-3 text-center">
                         {factura.dias_restantes === null ? (
                           <span className="text-sm text-slate-400">-</span>
                         ) : factura.vencida ? (
@@ -373,7 +374,7 @@ export default function CarteraPage() {
                         )}
                       </td>
                       {/* Abonado */}
-                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
+                      <td data-label="Abonado" className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
                         {factura.valor_abonado > 0 ? (
                           <span className="text-amber-600 dark:text-amber-400">
                             {formatCurrency(factura.valor_abonado)}
@@ -383,10 +384,10 @@ export default function CarteraPage() {
                         )}
                       </td>
                       {/* Pendiente */}
-                      <td className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-red-600 dark:text-red-400">
+                      <td data-label="Pendiente" className="px-3 sm:px-4 py-3 text-sm text-right font-bold text-red-600 dark:text-red-400">
                         {formatCurrency(factura.valor_pendiente)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 text-center">
+                      <td data-label="Acción" className="px-3 sm:px-4 py-3 text-center">
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                           {wsUrl ? (
                             <a

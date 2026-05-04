@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProtectedRoute from "../features/auth/components/ProtectedRoute";
 import PermissionRoute from "../features/auth/components/PermissionRoute";
-import LoginPage from "../features/auth/pages/LoginPage";
+const LoginPage = lazy(() => import("../features/auth/pages/LoginPage"));
 
 const CuentasPage = lazy(() => import("../features/cuentas/pages/CuentasPage"));
 const ClientesPage = lazy(
@@ -40,7 +40,11 @@ function LoadingFallback() {
 const router = createBrowserRouter([
   {
     path: "/login",
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
   {
     path: "/",

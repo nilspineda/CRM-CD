@@ -8,27 +8,13 @@ if (!supabaseUrl || !supabaseKey) {
   console.error("⚠️ Faltan las variables de entorno de Supabase");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-export const getCurrentSession = async () => {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error) throw error;
-
-  return session;
-};
-
-// Helper para obtener el usuario actual
-export const getCurrentUser = async () => {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) throw error;
-
-  return user;
-};
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    // Lee la sesión desde localStorage en cada carga (evita round-trip a la API)
+    persistSession: true,
+    // Renueva el token automáticamente antes de que expire
+    autoRefreshToken: true,
+    // Necesario para OAuth / magic links
+    detectSessionInUrl: true,
+  },
+});

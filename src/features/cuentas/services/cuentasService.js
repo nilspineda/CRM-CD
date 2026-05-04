@@ -6,7 +6,7 @@ export const cuentasService = {
   async getAll() {
     const { data, error } = await supabase
       .from("cuentas_financieras")
-      .select("*")
+      .select("id,nombre,tipo_cuenta,saldo_inicial,saldo_actual,estado,updated_at")
       .order("nombre");
 
     if (error) throw error;
@@ -17,7 +17,7 @@ export const cuentasService = {
   async getActivas() {
     const { data, error } = await supabase
       .from("cuentas_financieras")
-      .select("*")
+      .select("id,nombre,tipo_cuenta,saldo_inicial,saldo_actual,estado,updated_at")
       .eq("estado", true)
       .order("nombre");
 
