@@ -36,10 +36,46 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+    let bootstrapped = false;
 
-    // Supabase v2 dispara INITIAL_SESSION al suscribirse con la sesión
-    // ya almacenada en localStorage, sin necesidad de getSession() explícito.
-    // Así evitamos el doble round-trip a la API de auth en cada carga.
+    const finishBootstrap = () => {
+      if (mounted && !bootstrapped) {
+        bootstrapped = true;
+        setLoading(false);
+      }
+    };
+
+    const bootstrapSession = async () => {
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+        if (sessionError) throw sessionError;
+
+        const nextSession = data.session ?? null;
+        const nextUser = nextSession?.user ?? null;
+        const nextProfile = await fetchProfile(nextUser);
+
+        if (!mounted) return;
+
+        setSession(nextSession);
+        setUser(nextUser);
+        setProfile(nextProfile);
+        setError(null);
+      } catch (authError) {
+        if (!mounted) return;
+
+        setError(authError);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        finishBootstrap();
+      }
+    };
+
+    const bootstrapTimeout = window.setTimeout(finishBootstrap, 4000);
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
@@ -60,12 +96,15 @@ export function AuthProvider({ children }) {
         setUser(nextSession?.user ?? null);
         setProfile(null);
       } finally {
-        if (mounted) setLoading(false);
+        finishBootstrap();
       }
     });
 
+    bootstrapSession();
+
     return () => {
       mounted = false;
+      window.clearTimeout(bootstrapTimeout);
       subscription.unsubscribe();
     };
   }, []);
