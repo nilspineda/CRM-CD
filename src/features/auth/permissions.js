@@ -107,8 +107,13 @@ const normalizePermissionList = (value) => {
 export const getRoleLabel = (role) => ROLE_LABELS[role] || role || "Sin rol";
 
 export const getEffectiveAccess = ({ user, profile } = {}) => {
+  console.log('[Auth] getEffectiveAccess - profile:', profile, 'user:', user?.email);
+  
   const role =
     profile?.role_key || profile?.role || user?.app_metadata?.role || ROLES.AUXILIAR;
+  
+  console.log('[Auth] Detected role:', role, 'from profile:', profile?.role_key);
+  
   const basePermissions = new Set(
     DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS[ROLES.AUXILIAR],
   );
