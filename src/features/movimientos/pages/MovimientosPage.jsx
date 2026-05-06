@@ -248,6 +248,7 @@ export default function MovimientosPage() {
           value: (mov) => mov.cuentas_financieras?.nombre || "",
         },
         { header: "Total", value: (mov) => mov.valor_total || 0 },
+        { header: "Pendiente", value: (mov) => mov.valor_pendiente || 0 },
         { header: "Estado", value: (mov) => getEstadoLabel(mov.estado) },
         { header: "Observaciones", value: (mov) => mov.observaciones || "" },
       ],
@@ -271,7 +272,7 @@ export default function MovimientosPage() {
             Solo egresos y movimientos de caja o banco
           </p>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Mes seleccionado: {mesFiltro}
+            Mes seleccionado: {mesFiltro || currentMonth}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
