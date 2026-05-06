@@ -74,7 +74,11 @@ export default function MovimientosPage() {
       }),
   });
 
-  const { data: logsData, isLoading: logsLoading } = useQuery({
+  const {
+    data: logsData,
+    isLoading: logsLoading,
+    error: logsError,
+  } = useQuery({
     queryKey: ["movimientos", "logs", logsPage, logsMonth],
     queryFn: () =>
       movimientosService.getLogs({
@@ -83,6 +87,9 @@ export default function MovimientosPage() {
         month: logsMonth,
       }),
     initialData: { data: [], count: 0 },
+    onError: (err) => {
+      console.error("Error cargando logs de movimientos:", err);
+    },
   });
 
   const crearMutate = useMutation({
@@ -194,10 +201,33 @@ export default function MovimientosPage() {
       fileName: `logs-movimientos-${logsMonth || currentMonth}`,
       sheetName: "Logs",
       columns: [
-        { header: "Fecha", value: (log) => log.created_at || log.fecha_hora || log.fecha || "" },
-        { header: "Usuario", value: (log) => log.usuario_email || log.user_email || log.usuario || log.user_name || log.created_by || currentUserLabel },
-        { header: "Acción", value: (log) => log.accion || log.action || log.tipo_accion || "Movimiento" },
-        { header: "Detalle", value: (log) => log.detalle || log.descripcion || log.observaciones || "Sin detalle" },
+        {
+          header: "Fecha",
+          value: (log) => log.created_at || log.fecha_hora || log.fecha || "",
+        },
+        {
+          header: "Usuario",
+          value: (log) =>
+            log.usuario_email ||
+            log.user_email ||
+            log.usuario ||
+            log.user_name ||
+            log.created_by ||
+            currentUserLabel,
+        },
+        {
+          header: "Acción",
+          value: (log) =>
+            log.accion || log.action || log.tipo_accion || "Movimiento",
+        },
+        {
+          header: "Detalle",
+          value: (log) =>
+            log.detalle ||
+            log.descripcion ||
+            log.observaciones ||
+            "Sin detalle",
+        },
       ],
       rows: data || [],
     });
@@ -520,6 +550,7 @@ export default function MovimientosPage() {
         onDownload={handleDownloadLogs}
         downloading={logsLoading}
         currentUserLabel={currentUserLabel}
+        error={logsError}
         title="Logs de movimientos"
       />
 

@@ -121,9 +121,7 @@ export default function MovimientoForm({
   const cuentaSeleccionada = cuentas.find(
     (cuenta) => cuenta.id === formData.cuenta_id,
   );
-  const saldoTotalCuenta =
-    (Number(cuentaSeleccionada?.saldo_inicial) || 0) +
-    (Number(cuentaSeleccionada?.saldo_actual) || 0);
+  const saldoTotalCuenta = Number(cuentaSeleccionada?.saldo_actual) || 0;
   const valor = Number(formData.valor_total) || 0;
   const esIngreso = isIngreso(formData.tipo_movimiento);
   const impacto =
@@ -177,8 +175,8 @@ export default function MovimientoForm({
           <option value="">Seleccionar cuenta</option>
           {cuentas.map((cuenta) => (
             <option key={cuenta.id} value={cuenta.id}>
-              {cuenta.nombre} — {" "}
-              {((Number(cuenta.saldo_inicial) || 0) + (Number(cuenta.saldo_actual) || 0)).toLocaleString("es-CO", {
+              {cuenta.nombre} —{" "}
+              {(Number(cuenta.saldo_actual) || 0).toLocaleString("es-CO", {
                 style: "currency",
                 currency: "COP",
               })}
@@ -220,7 +218,7 @@ export default function MovimientoForm({
           </p>
           <p className="dark:text-slate-300">{cuentaSeleccionada.nombre}</p>
           <p className="dark:text-slate-300">
-            Saldo total: {" "}
+            Saldo total:{" "}
             {saldoTotalCuenta.toLocaleString("es-CO", {
               style: "currency",
               currency: "COP",

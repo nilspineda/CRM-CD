@@ -25,6 +25,7 @@ const getLogDetail = (log) => {
 export default function MovimientoLogsCard({
   logs = [],
   loading = false,
+  error = null,
   page = 1,
   totalPages = 1,
   totalCount = 0,
@@ -42,6 +43,12 @@ export default function MovimientoLogsCard({
   return (
     <Card className="w-full overflow-hidden">
       <CardContent className="p-0">
+        {error && (
+          <div className="px-4 sm:px-6 py-2 bg-red-50 text-red-700 text-sm border-b border-red-100">
+            Error cargando logs: {error.message || String(error)}. Revisa la
+            consola para más detalles.
+          </div>
+        )}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70">
           <div>
             <h2 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">
@@ -117,15 +124,21 @@ export default function MovimientoLogsCard({
               ) : (
                 logs.map((log) => (
                   <tr
-                    key={log.id || `${getLogDateTime(log)}-${getLogAction(log)}-${getLogUser(log)}`}
+                    key={
+                      log.id ||
+                      `${getLogDateTime(log)}-${getLogAction(log)}-${getLogUser(log)}`
+                    }
                     className="hover:bg-slate-50 dark:hover:bg-slate-700"
                   >
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                       {getLogDateTime(log)
-                        ? new Date(getLogDateTime(log)).toLocaleString("es-CO", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })
+                        ? new Date(getLogDateTime(log)).toLocaleString(
+                            "es-CO",
+                            {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            },
+                          )
                         : "-"}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
@@ -147,7 +160,8 @@ export default function MovimientoLogsCard({
         {showPagination && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              Mostrando {Math.min((page - 1) * pageSize + 1, totalCount)} - {Math.min(page * pageSize, totalCount)} de {totalCount}
+              Mostrando {Math.min((page - 1) * pageSize + 1, totalCount)} -{" "}
+              {Math.min(page * pageSize, totalCount)} de {totalCount}
             </div>
             <div className="flex gap-2">
               <button

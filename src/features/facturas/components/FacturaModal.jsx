@@ -84,6 +84,30 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
     },
   });
 
+  // Auto-fill consecutivo para RM
+  useEffect(() => {
+    let mounted = true;
+    const tryFill = async () => {
+      try {
+        if (
+          facturaForm.prefijo === 'RM' &&
+          (!facturaForm.numero_factura || facturaForm.numero_factura === '') &&
+          !factura
+        ) {
+          const next = await facturasService.getNextNumero('RM');
+          if (mounted) setFacturaForm((prev) => ({ ...prev, numero_factura: next }));
+        }
+      } catch (err) {
+        console.error('Error obteniendo siguiente número RM:', err);
+      }
+    };
+
+    tryFill();
+    return () => {
+      mounted = false;
+    };
+  }, [facturaForm.prefijo, factura]);
+
   const actualizarMutate = useMutation({
     mutationFn: ({ id, data }) => facturasService.update(id, data),
     onSuccess: () => {
@@ -152,7 +176,7 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
             ))}
           </Select>
           <Input
-            label="Número"
+            label="Número / Siigo"
             value={facturaForm.numero_factura}
             onChange={(e) =>
               setFacturaForm((prev) => ({

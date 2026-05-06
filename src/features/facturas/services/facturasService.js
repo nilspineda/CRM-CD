@@ -82,11 +82,27 @@ const sanitizeFacturaPayload = (factura = {}) => {
 };
 
 export const facturasService = {
+  async getNextNumero(prefijo = "RM") {
+    const { data, error } = await supabase
+      .from("facturas")
+      .select("numero_factura")
+      .eq("prefijo", prefijo)
+      .order("numero_factura", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    const last =
+      Array.isArray(data) && data.length > 0 ? data[0].numero_factura : null;
+    const lastNum =
+      last == null ? 0 : parseInt(String(last).replace(/\D/g, ""), 10) || 0;
+    return String(lastNum + 1);
+  },
   async getAll(filtros = {}) {
     let query = supabase
       .from("facturas")
       .select(
-        "id,cliente_nit,prefijo,numero_factura,fecha_creacion,fecha_pago,fecha_proximo_pago,valor_total,valor_pagado,estado,observaciones,cuenta_id,updated_at"
+        "id,cliente_nit,prefijo,numero_factura,fecha_creacion,fecha_pago,fecha_proximo_pago,valor_total,valor_pagado,estado,observaciones,cuenta_id,updated_at",
       )
       .order("fecha_creacion", { ascending: false });
 
@@ -127,6 +143,14 @@ export const facturasService = {
       cuenta_id: factura.cuenta_id || null,
     };
 
+    // Si es Remisión (RM) y no se proporcionó número, asignar consecutivo automáticamente
+    if (
+      (payload.prefijo === "RM" || factura.prefijo === "RM") &&
+      !payload.numero_factura
+    ) {
+      payload.numero_factura = await this.getNextNumero("RM");
+    }
+
     await validarUnicidad(payload.prefijo, payload.numero_factura);
 
     const { data, error } = await supabase
@@ -165,15 +189,16 @@ export const facturasService = {
     if (anterior.estado !== "pagado" && actualizado.estado === "pagado") {
       await ajustarCuenta(actualizado.cuenta_id, actualizado.valor_total || 0);
     }
-    if (
-      anterior.estado === "pagado" &&
-      actualizado.estado === "pagado"
-    ) {
+    if (anterior.estado === "pagado" && actualizado.estado === "pagado") {
       if (anterior.cuenta_id !== actualizado.cuenta_id) {
         await ajustarCuenta(anterior.cuenta_id, -(anterior.valor_total || 0));
-        await ajustarCuenta(actualizado.cuenta_id, actualizado.valor_total || 0);
+        await ajustarCuenta(
+          actualizado.cuenta_id,
+          actualizado.valor_total || 0,
+        );
       } else if (anterior.valor_total !== actualizado.valor_total) {
-        const diff = (actualizado.valor_total || 0) - (anterior.valor_total || 0);
+        const diff =
+          (actualizado.valor_total || 0) - (anterior.valor_total || 0);
         await ajustarCuenta(actualizado.cuenta_id, diff);
       }
     }
@@ -185,11 +210,22 @@ export const facturasService = {
     const factura = await this.getById(id);
     const payload = {
       estado: datos.estado,
-      fecha_pago: datos.fecha_pago !== undefined ? datos.fecha_pago : factura.fecha_pago,
-      fecha_proximo_pago: datos.fecha_proximo_pago !== undefined ? datos.fecha_proximo_pago : factura.fecha_proximo_pago,
-      valor_pagado: datos.valor_pagado !== undefined ? datos.valor_pagado : factura.valor_pagado,
-      observaciones: datos.observaciones !== undefined ? datos.observaciones : factura.observaciones,
-      cuenta_id: datos.cuenta_id !== undefined ? datos.cuenta_id : factura.cuenta_id,
+      fecha_pago:
+        datos.fecha_pago !== undefined ? datos.fecha_pago : factura.fecha_pago,
+      fecha_proximo_pago:
+        datos.fecha_proximo_pago !== undefined
+          ? datos.fecha_proximo_pago
+          : factura.fecha_proximo_pago,
+      valor_pagado:
+        datos.valor_pagado !== undefined
+          ? datos.valor_pagado
+          : factura.valor_pagado,
+      observaciones:
+        datos.observaciones !== undefined
+          ? datos.observaciones
+          : factura.observaciones,
+      cuenta_id:
+        datos.cuenta_id !== undefined ? datos.cuenta_id : factura.cuenta_id,
       updated_at: new Date().toISOString(),
     };
 
