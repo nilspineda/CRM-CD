@@ -185,7 +185,10 @@ export default function MovimientosPage() {
       ordenarPor: "fecha_desc",
     });
     setMesFiltro(currentMonth);
+    // sincronizar logs con el mes por defecto y resetear paginación
+    setLogsMonth(currentMonth);
     setPage(1);
+    setLogsPage(1);
   };
 
   const handleDownloadLogs = async () => {
@@ -374,8 +377,12 @@ export default function MovimientosPage() {
               type="month"
               value={mesFiltro}
               onChange={(e) => {
-                setMesFiltro(e.target.value);
+                const v = e.target.value;
+                setMesFiltro(v);
+                // sincronizar logs con el mismo mes y resetear paginación
+                setLogsMonth(v);
                 setPage(1);
+                setLogsPage(1);
               }}
               className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:bg-slate-800 dark:text-slate-100"
             />

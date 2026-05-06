@@ -217,6 +217,7 @@ export const normalizeTipoMovimiento = (valor) => {
 };
 
 export const getEstadoLabel = (estado) => {
+  const key = (estado || "").toLowerCase();
   const labels = {
     pendiente: "Pendiente",
     pagado: "Pagado",
@@ -224,10 +225,11 @@ export const getEstadoLabel = (estado) => {
     pago_parcial: "Parcial",
     anulado: "Anulado",
   };
-  return labels[estado] || estado;
+  return labels[key] || estado;
 };
 
 export const getEstadoColor = (estado) => {
+  const key = (estado || "").toLowerCase();
   const colors = {
     pendiente:
       "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",

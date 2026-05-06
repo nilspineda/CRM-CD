@@ -102,7 +102,8 @@ export default function MovimientoForm({
     if (!formData.valor_total || Number(formData.valor_total) <= 0) {
       newErrors.valor_total = "El valor debe ser mayor a 0";
     }
-    if (formData.estado === "pago_parcial") {
+    const est = (formData.estado || "").toLowerCase();
+    if (est === "pago_parcial") {
       const vp = Number(formData.valor_pagado || 0);
       if (!vp || vp <= 0)
         newErrors.valor_pagado = "El valor pagado debe ser mayor a 0";
@@ -134,8 +135,9 @@ export default function MovimientoForm({
   const saldoTotalCuenta = Number(cuentaSeleccionada?.saldo_actual) || 0;
   const valor = Number(formData.valor_total) || 0;
   const esIngreso = isIngreso(formData.tipo_movimiento);
+  const estado = (formData.estado || "").toLowerCase();
   const impacto =
-    formData.estado === "pagado" ? (esIngreso ? valor : -valor) : 0;
+    estado === "pagado" ? (esIngreso ? valor : -valor) : 0;
   const saldoDespues = saldoTotalCuenta + impacto;
 
   return (
@@ -246,8 +248,7 @@ export default function MovimientoForm({
         </div>
       )}
 
-      {cuentaSeleccionada &&
-        (formData.estado === "pagado" ||
+      {(formData.estado === "pagado" ||
           formData.estado === "pago_parcial") && (
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
             <p className="font-medium text-slate-800 dark:text-slate-100">

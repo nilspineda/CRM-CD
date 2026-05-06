@@ -41,7 +41,7 @@ export default function CarteraPage() {
 
   const { data: clientesData = [], isLoading: clientesLoading } = useQuery({
     queryKey: ["clientes", "minimal"],
-    queryFn: clientesService.getMinimal,
+    queryFn: clientesService.getAll,
     staleTime: 10 * 60 * 1000, // clientes cambian poco, cachear 10 min
   });
 

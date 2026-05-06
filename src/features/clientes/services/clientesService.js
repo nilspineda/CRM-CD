@@ -13,14 +13,14 @@ export const clientesService = {
       .order("nombre");
 
     if (search.trim()) {
-      const searchTerm = search.trim();
-      const searchClean = searchTerm.replace(/\s/g, "");
+      const searchClean = search.replace(/\s/g, "");
       query = query.or(
-        `nit.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,telefono.ilike.%${searchClean}%,correo.ilike.%${searchTerm}%,responsable.ilike.%${searchTerm}%`,
+        `nit.ilike.%${searchClean}%,nit.ilike.%${search}%,nombre.ilike.%${search}%,telefono.ilike.%${search}%,telefono.ilike.%${searchClean}%,correo.ilike.%${search}%,responsable.ilike.%${search}%`,
       );
     }
 
     const { data, error, count } = await query.range(from, to);
+    console.log('[clientes] search:', search, 'results:', data?.length, 'error:', error);
 
     if (error) throw error;
     return { data: data || [], count: count || 0 };
@@ -40,14 +40,14 @@ export const clientesService = {
     if (errorActivos) throw errorActivos;
     if (errorInactivos) throw errorInactivos;
 
-    return { activos: activos || 0, inactivos: inactivos || 0 };
+return { activos: activos || 0, inactivos: inactivos || 0 };
   },
 
-  // Versión ligera: solo los campos necesarios para enricher facturas en CarteraPage
-  async getMinimal() {
+  async getAll() {
     const { data, error } = await supabase
       .from("clientes")
-      .select("nit,nombre,telefono");
+      .select("id,nit,nombre,telefono,correo,responsable,direccion,estado")
+      .order("nombre");
 
     if (error) throw error;
     return data || [];

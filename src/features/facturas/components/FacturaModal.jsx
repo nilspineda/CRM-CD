@@ -127,7 +127,9 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
   const handleFacturaSubmit = async (e) => {
     e.preventDefault();
     const nextErrors = {};
-    if (!facturaForm.cliente_nit)
+    
+    const clienteSeleccionado = facturaForm.cliente_nit || clienteBusqueda;
+    if (!clienteSeleccionado)
       nextErrors.cliente_nit = "El cliente es obligatorio";
     if (!facturaForm.numero_factura)
       nextErrors.numero_factura = "El número es obligatorio";
@@ -142,6 +144,7 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
     try {
       const payload = {
         ...facturaForm,
+        cliente_nit: clienteSeleccionado,
         valor_total: Number(facturaForm.valor_total),
       };
       if (factura) {
@@ -228,20 +231,20 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
                   {clientesFiltrados.map((cliente) => (
                     <button
-                      key={cliente.nit}
+                      key={cliente.id}
                       type="button"
                       onClick={() => {
                         setFacturaForm((prev) => ({
                           ...prev,
-                          cliente_nit: cliente.nit,
+                          cliente_nit: cliente.nit || "",
                         }));
-                        setClienteBusqueda("");
+                        setClienteBusqueda(cliente.nombre || "");
                         setMostrarResultados(false);
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0 transition-colors"
                     >
                       <div className="font-medium text-slate-900 dark:text-slate-100">
-                        {cliente.nit} - {cliente.nombre}
+                        {cliente.nit || "(sin NIT)"} - {cliente.nombre}
                       </div>
                       {cliente.responsable && (
                         <div className="text-xs text-slate-500 dark:text-slate-400">

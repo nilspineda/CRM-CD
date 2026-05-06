@@ -101,7 +101,7 @@ export default function FacturasPage() {
 
   const { data: clientesData = [], isLoading: clientesLoading } = useQuery({
     queryKey: ["clientes", "minimal"],
-    queryFn: clientesService.getMinimal,
+    queryFn: clientesService.getAll,
   });
 
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
@@ -208,18 +208,19 @@ export default function FacturasPage() {
     return result;
   }, [facturasData, clientesMap, cuentasMap, filtros.busqueda]);
 
-  const statsFacturacion = useMemo(() => {
+const statsFacturacion = useMemo(() => {
     let total = 0;
     let pagado = 0;
     let pendiente = 0;
 
     facturasEnriquecidas.forEach((f) => {
       if (f.estado === "anulado") return;
+      const est = (f.estado || "").toLowerCase();
       const val = Number(f.valor_total) || 0;
       total += val;
-      if (f.estado === "pagado") {
+      if (est === "pagado") {
         pagado += val;
-      } else if (f.estado === "pago_parcial") {
+      } else if (est === "pago_parcial") {
         const abonado = Number(f.valor_pagado) || 0;
         pagado += abonado;
         pendiente += (val - abonado);
@@ -561,15 +562,15 @@ export default function FacturasPage() {
                         {formatCurrency(factura.valor_total)}
                       </td>
                       <td data-label="Pendiente" className="px-3 sm:px-4 py-3 text-sm text-right font-medium">
-                        {factura.estado === "pagado" ? (
-                          <span className="text-green-600 dark:text-green-400">—</span>
-                        ) : factura.estado === "pago_parcial" ? (
+                        {(factura.estado || "").toLowerCase() === "pagado" ? (
+                          <span className="text-green-600 dark:text-green-400">$0</span>
+                        ) : (factura.estado || "").toLowerCase() === "pago_parcial" ? (
                           <span className="text-amber-600 dark:text-amber-400">
                             {formatCurrency(
                               Math.max(0, (factura.valor_total || 0) - (factura.valor_pagado || 0))
                             )}
                           </span>
-                        ) : factura.estado === "anulado" ? (
+                        ) : (factura.estado || "").toLowerCase() === "anulado" ? (
                           <span className="text-slate-400">—</span>
                         ) : (
                           <span className="text-red-600 dark:text-red-400">

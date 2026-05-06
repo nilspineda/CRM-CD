@@ -72,14 +72,15 @@ export default function ClientesPage() {
 
   const { data: clientes = {}, isLoading } = useQuery({
     queryKey: ["clientes", "paginated", page, queryDebounced],
-    queryFn: () =>
-      clientesService.getPaginated({
+    queryFn: async () => {
+      console.log('[ClientesPage] Fetching with search:', queryDebounced);
+      return clientesService.getPaginated({
         page,
         pageSize: PAGE_SIZE,
         search: queryDebounced,
-      }),
+      });
+    },
     staleTime: 2 * 60 * 1000,
-    placeholderData: (prev) => prev,
   });
 
   const totalPages = Math.ceil((clientes.count || 0) / PAGE_SIZE);

@@ -46,7 +46,7 @@ const normalizeMovimiento = (movimiento) => {
         movimiento.valor_pagado == null
           ? 0
           : Number(movimiento.valor_pagado) || 0;
-      const estado = movimiento.estado || "pendiente";
+      const estado = (movimiento.estado || "pendiente").toLowerCase();
       if (estado === "pagado") return 0;
       if (estado === "pago_parcial") return Math.max(0, total - pagado);
       return total;
@@ -58,13 +58,14 @@ const normalizeMovimiento = (movimiento) => {
 const getMovimientoImpacto = (movimiento) => {
   if (!movimiento) return 0;
   const tipoIngreso = isIngreso(movimiento.tipo_movimiento);
+  const estado = (movimiento.estado || "").toLowerCase();
 
-  if (movimiento.estado === "pagado") {
+  if (estado === "pagado") {
     const val = Math.abs(movimiento.valor_total || 0);
     return tipoIngreso ? val : -val;
   }
 
-  if (movimiento.estado === "pago_parcial") {
+  if (estado === "pago_parcial") {
     const val = Math.abs(movimiento.valor_pagado || 0);
     return tipoIngreso ? val : -val;
   }
