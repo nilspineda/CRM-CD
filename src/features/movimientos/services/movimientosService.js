@@ -34,16 +34,42 @@ const normalizeMovimiento = (movimiento) => {
     cliente_proveedor: movimiento.cliente_proveedor || null,
     observaciones: movimiento.observaciones || null,
     valor_total: Number(movimiento.valor_total) || 0,
+    valor_pagado:
+      movimiento.valor_pagado == null
+        ? 0
+        : Number(movimiento.valor_pagado) || 0,
     estado: movimiento.estado || "pendiente",
+    // calcular valor pendiente según estado
+    valor_pendiente: (() => {
+      const total = Number(movimiento.valor_total) || 0;
+      const pagado =
+        movimiento.valor_pagado == null
+          ? 0
+          : Number(movimiento.valor_pagado) || 0;
+      const estado = movimiento.estado || "pendiente";
+      if (estado === "pagado") return 0;
+      if (estado === "pago_parcial") return Math.max(0, total - pagado);
+      return total;
+    })(),
     updated_at: movimiento.updated_at || new Date().toISOString(),
   };
 };
 
 const getMovimientoImpacto = (movimiento) => {
-  if (!movimiento || movimiento.estado !== "pagado") return 0;
-  const val = Math.abs(movimiento.valor_total || 0);
-  if (isIngreso(movimiento.tipo_movimiento)) return val;
-  return -val;
+  if (!movimiento) return 0;
+  const tipoIngreso = isIngreso(movimiento.tipo_movimiento);
+
+  if (movimiento.estado === "pagado") {
+    const val = Math.abs(movimiento.valor_total || 0);
+    return tipoIngreso ? val : -val;
+  }
+
+  if (movimiento.estado === "pago_parcial") {
+    const val = Math.abs(movimiento.valor_pagado || 0);
+    return tipoIngreso ? val : -val;
+  }
+
+  return 0;
 };
 
 const applyCuentaImpacto = async (cuentaId, impacto) => {
@@ -83,7 +109,12 @@ const getMonthRange = (month) => {
   };
 };
 
-const buildLogsQuery = ({ month, page = 1, pageSize = 30, dateColumn = "created_at" }) => {
+const buildLogsQuery = ({
+  month,
+  page = 1,
+  pageSize = 30,
+  dateColumn = "created_at",
+}) => {
   let query = supabase.from("movimientos_financieros_logs").select("*", {
     count: "exact",
   });
@@ -143,7 +174,7 @@ export const movimientosService = {
     }
     if (filtros.estado) {
       if (filtros.estado === "cartera") {
-        query = query.in("estado", ["pendiente", "parcial"]);
+        query = query.in("estado", ["pendiente", "pago_parcial"]);
       } else {
         query = query.eq("estado", filtros.estado);
       }
@@ -185,15 +216,46 @@ export const movimientosService = {
   // Crear movimiento
   async create(movimiento) {
     const datos = normalizeMovimiento(movimiento);
-
-    const { data, error } = await supabase
+    // Intentar insertar; si la BD no reconoce `valor_pagado`, reintentar sin esa columna
+    let res = await supabase
       .from("movimientos_financieros")
       .insert([datos])
       .select();
+    if (res.error) {
+      const msg = String(res.error.message || "").toLowerCase();
+      // Si la BD no reconoce columnas nuevas, reintentar sin ellas
+      const datos2 = { ...datos };
+      let retried = false;
+      if (
+        msg.includes("valor_pagado") ||
+        msg.includes('column "valor_pagado"') ||
+        msg.includes("could not find the 'valor_pagado'")
+      ) {
+        delete datos2.valor_pagado;
+        retried = true;
+      }
+      if (
+        msg.includes("valor_pendiente") ||
+        msg.includes('column "valor_pendiente"') ||
+        msg.includes("could not find the 'valor_pendiente'")
+      ) {
+        delete datos2.valor_pendiente;
+        retried = true;
+      }
+      if (retried) {
+        res = await supabase
+          .from("movimientos_financieros")
+          .insert([datos2])
+          .select();
+      }
+    }
 
-    if (error) throw error;
-    await applyCuentaImpacto(data[0].cuenta_id, getMovimientoImpacto(data[0]));
-    return data[0];
+    if (res.error) throw res.error;
+    await applyCuentaImpacto(
+      res.data[0].cuenta_id,
+      getMovimientoImpacto(res.data[0]),
+    );
+    return res.data[0];
   },
 
   // Actualizar movimiento
@@ -203,20 +265,51 @@ export const movimientosService = {
       ...normalizeMovimiento(movimiento),
       updated_at: new Date().toISOString(),
     };
-
-    const { data, error } = await supabase
+    // Intentar update; si la BD no reconoce `valor_pagado`, reintentar sin esa columna
+    let res = await supabase
       .from("movimientos_financieros")
       .update(datos)
       .eq("id", id)
       .select();
+    if (res.error) {
+      const msg = String(res.error.message || "").toLowerCase();
+      const datos2 = { ...datos };
+      let retried = false;
+      if (
+        msg.includes("valor_pagado") ||
+        msg.includes('column "valor_pagado"') ||
+        msg.includes("could not find the 'valor_pagado'")
+      ) {
+        delete datos2.valor_pagado;
+        retried = true;
+      }
+      if (
+        msg.includes("valor_pendiente") ||
+        msg.includes('column "valor_pendiente"') ||
+        msg.includes("could not find the 'valor_pendiente'")
+      ) {
+        delete datos2.valor_pendiente;
+        retried = true;
+      }
+      if (retried) {
+        res = await supabase
+          .from("movimientos_financieros")
+          .update(datos2)
+          .eq("id", id)
+          .select();
+      }
+    }
 
-    if (error) throw error;
+    if (res.error) throw res.error;
     await applyCuentaImpacto(
       anterior.cuenta_id,
       -getMovimientoImpacto(anterior),
     );
-    await applyCuentaImpacto(data[0].cuenta_id, getMovimientoImpacto(data[0]));
-    return data[0];
+    await applyCuentaImpacto(
+      res.data[0].cuenta_id,
+      getMovimientoImpacto(res.data[0]),
+    );
+    return res.data[0];
   },
 
   // Anular movimiento
@@ -304,7 +397,9 @@ export const movimientosService = {
   async getByCuenta(cuentaId) {
     const { data, error } = await supabase
       .from("movimientos_financieros")
-      .select("id, fecha, tipo_movimiento, descripcion, valor_total, estado, cuenta_id, cliente_proveedor")
+      .select(
+        "id, fecha, tipo_movimiento, descripcion, valor_total, estado, cuenta_id, cliente_proveedor",
+      )
       .eq("cuenta_id", cuentaId)
       .order("fecha", { ascending: false });
 

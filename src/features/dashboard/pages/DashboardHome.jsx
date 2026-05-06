@@ -31,6 +31,7 @@ import Card, {
 import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../../movimientos/services/movimientosService";
+import { clientesService } from "../../clientes/services/clientesService";
 import {
   formatCurrency,
   formatDate,
@@ -150,7 +151,11 @@ export default function DashboardHome() {
 
   const { data: movimientosData = [], isLoading: movimientosLoading } =
     useQuery({
-      queryKey: ["movimientos", anioResumen.start.toISOString(), anioResumen.end.toISOString()],
+      queryKey: [
+        "movimientos",
+        anioResumen.start.toISOString(),
+        anioResumen.end.toISOString(),
+      ],
       queryFn: () =>
         movimientosService.getAll({
           fechaInicio: anioResumen.start.toISOString().split("T")[0],
@@ -177,7 +182,13 @@ export default function DashboardHome() {
       ),
   });
 
-  const loading = cuentasLoading || movimientosLoading || statsLoading;
+  const { data: birthdays = [], isLoading: birthdaysLoading } = useQuery({
+    queryKey: ["clientes", "cumpleanos"],
+    queryFn: () => clientesService.getUpcomingBirthdays(10),
+  });
+
+  const loading =
+    cuentasLoading || movimientosLoading || statsLoading || birthdaysLoading;
 
   const movimientosRecientes = useMemo(
     () => movimientosData.slice(0, 6),
@@ -196,7 +207,7 @@ export default function DashboardHome() {
 
   const monthlyChartData = useMemo(() => {
     const months = buildMonthlyChart(movimientosData);
-    // Nota: Las facturas pagadas ya vienen en movimientosData como tipo factura_venta (pagadas) 
+    // Nota: Las facturas pagadas ya vienen en movimientosData como tipo factura_venta (pagadas)
     // así que no necesitamos sumar facturas separadas aquí si se maneja correctamente en movimientos.
     return months;
   }, [movimientosData]);
@@ -439,7 +450,7 @@ export default function DashboardHome() {
                   />
                   <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
                   <Tooltip content={<DashboardTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Bar
                     dataKey="Ingresos"
                     fill="#f59e0b"
@@ -490,7 +501,7 @@ export default function DashboardHome() {
                     tick={{ fill: "#64748b", fontSize: 11 }}
                   />
                   <Tooltip content={<DashboardTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Bar
                     dataKey="saldo"
                     name="Saldo"
@@ -653,6 +664,52 @@ export default function DashboardHome() {
 
       {/* Quick actions */}
       <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-base sm:text-lg">
+            Próximos cumpleaños
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {birthdaysLoading ? (
+            <div className="text-sm text-slate-500">Cargando...</div>
+          ) : birthdays.length === 0 ? (
+            <div className="text-sm text-slate-500">
+              No hay cumpleaños próximos
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="text-xs text-slate-600 dark:text-slate-400 uppercase">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Cliente</th>
+                    <th className="px-3 py-2 text-left">Empresa</th>
+                    <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-right">Días</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {birthdays.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700"
+                    >
+                      <td className="px-3 py-2 text-sm">
+                        {b.responsable || "-"}
+                      </td>
+                      <td className="px-3 py-2 text-sm">{b.nombre || b.nit}</td>
+                      <td className="px-3 py-2 text-sm">{b.next_birthday}</td>
+                      <td className="px-3 py-2 text-sm text-right">
+                        {b.days_until}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card className="w-full">
         <CardContent className="p-3 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3 sm:mb-4">
             Acciones rápidas
@@ -691,7 +748,10 @@ export default function DashboardHome() {
               className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:bg-slate-200"
             >
               <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <Clock size={18} className="text-orange-600 dark:text-orange-400" />
+                <Clock
+                  size={18}
+                  className="text-orange-600 dark:text-orange-400"
+                />
               </div>
               <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
                 Cartera

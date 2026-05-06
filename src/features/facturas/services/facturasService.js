@@ -83,6 +83,20 @@ const sanitizeFacturaPayload = (factura = {}) => {
 
 export const facturasService = {
   async getNextNumero(prefijo = "RM") {
+    // Primero intentar obtener el siguiente número desde la sequence (función RPC)
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "peek_next_factura_rm",
+      );
+      if (!rpcError && rpcData) {
+        // supabase.rpc returns the value directly
+        return String(rpcData);
+      }
+      // si RPC falla, continuar con el cálculo por tabla
+    } catch (e) {
+      // ignore and fallback
+    }
+
     const { data, error } = await supabase
       .from("facturas")
       .select("numero_factura")
@@ -96,7 +110,7 @@ export const facturasService = {
       Array.isArray(data) && data.length > 0 ? data[0].numero_factura : null;
     const lastNum =
       last == null ? 0 : parseInt(String(last).replace(/\D/g, ""), 10) || 0;
-    return String(lastNum + 1);
+    return String(lastNum + 1).padStart(1, "0");
   },
   async getAll(filtros = {}) {
     let query = supabase

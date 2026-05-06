@@ -8,6 +8,7 @@ import { TIPOS_MOVIMIENTO_EGRESOS, CATEGORY_ORDER_EGRESOS } from "../constants";
 
 const ESTADOS = [
   { value: "pendiente", label: "Pendiente" },
+  { value: "pago_parcial", label: "Pago parcial" },
   { value: "pagado", label: "Pagado" },
 ];
 
@@ -34,6 +35,7 @@ export default function MovimientoForm({
     tipo_movimiento: initialData.tipo_movimiento || "servicios_agua_1p",
     cuenta_id: initialData.cuenta_id || "",
     valor_total: initialData.valor_total || 0,
+    valor_pagado: initialData.valor_pagado || 0,
     estado: initialData.estado || "pendiente",
     observaciones: initialData.observaciones || "",
   });
@@ -50,6 +52,7 @@ export default function MovimientoForm({
         tipo_movimiento: movimiento.tipo_movimiento || "servicios_agua_1p",
         cuenta_id: movimiento.cuenta_id || "",
         valor_total: movimiento.valor_total || 0,
+        valor_pagado: movimiento.valor_pagado || 0,
         estado: movimiento.estado || "pendiente",
         observaciones: movimiento.observaciones || "",
       });
@@ -98,6 +101,13 @@ export default function MovimientoForm({
     if (!formData.cuenta_id) newErrors.cuenta_id = "La cuenta es requerida";
     if (!formData.valor_total || Number(formData.valor_total) <= 0) {
       newErrors.valor_total = "El valor debe ser mayor a 0";
+    }
+    if (formData.estado === "pago_parcial") {
+      const vp = Number(formData.valor_pagado || 0);
+      if (!vp || vp <= 0)
+        newErrors.valor_pagado = "El valor pagado debe ser mayor a 0";
+      if (vp > Number(formData.valor_total || 0))
+        newErrors.valor_pagado = "El valor pagado no puede exceder el total";
     }
 
     setErrors(newErrors);
@@ -211,41 +221,68 @@ export default function MovimientoForm({
         </Select>
       </div>
 
-      {cuentaSeleccionada && formData.estado === "pagado" && (
-        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
-          <p className="font-medium text-slate-800 dark:text-slate-100">
-            Saldo total de la cuenta
-          </p>
-          <p className="dark:text-slate-300">{cuentaSeleccionada.nombre}</p>
-          <p className="dark:text-slate-300">
-            Saldo total:{" "}
-            {saldoTotalCuenta.toLocaleString("es-CO", {
-              style: "currency",
-              currency: "COP",
-            })}
-          </p>
-          <p
-            className={
-              esIngreso
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            }
-          >
-            {esIngreso ? "+" : "−"}{" "}
-            {valor.toLocaleString("es-CO", {
-              style: "currency",
-              currency: "COP",
-            })}
-          </p>
-          <p className="font-semibold text-slate-800 dark:text-slate-100">
-            Saldo después:{" "}
-            {saldoDespues.toLocaleString("es-CO", {
-              style: "currency",
-              currency: "COP",
-            })}
-          </p>
+      {formData.estado === "pago_parcial" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Valor pagado"
+            name="valor_pagado"
+            type="number"
+            value={formData.valor_pagado || 0}
+            onChange={handleChange}
+            error={errors.valor_pagado}
+            placeholder="0"
+            required
+          />
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300">
+            <p className="font-medium">Pendiente</p>
+            <p className="text-sm">
+              {Math.max(
+                0,
+                (Number(formData.valor_total) || 0) -
+                  (Number(formData.valor_pagado) || 0),
+              ).toLocaleString("es-CO", { style: "currency", currency: "COP" })}
+            </p>
+          </div>
         </div>
       )}
+
+      {cuentaSeleccionada &&
+        (formData.estado === "pagado" ||
+          formData.estado === "pago_parcial") && (
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300 space-y-1">
+            <p className="font-medium text-slate-800 dark:text-slate-100">
+              Saldo total de la cuenta
+            </p>
+            <p className="dark:text-slate-300">{cuentaSeleccionada.nombre}</p>
+            <p className="dark:text-slate-300">
+              Saldo total:{" "}
+              {saldoTotalCuenta.toLocaleString("es-CO", {
+                style: "currency",
+                currency: "COP",
+              })}
+            </p>
+            <p
+              className={
+                esIngreso
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }
+            >
+              {esIngreso ? "+" : "−"}{" "}
+              {valor.toLocaleString("es-CO", {
+                style: "currency",
+                currency: "COP",
+              })}
+            </p>
+            <p className="font-semibold text-slate-800 dark:text-slate-100">
+              Saldo después:{" "}
+              {saldoDespues.toLocaleString("es-CO", {
+                style: "currency",
+                currency: "COP",
+              })}
+            </p>
+          </div>
+        )}
 
       <Textarea
         label="Observaciones"

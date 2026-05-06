@@ -40,7 +40,11 @@ OR REPLACE FUNCTION public.assign_factura_rm_numero() RETURNS trigger LANGUAGE p
 AND (
     NEW.numero_factura IS NULL
     OR btrim(NEW.numero_factura) = ''
-) THEN NEW.numero_factura := lpad(nextval('public.facturas_rm_seq') :: text, 4, '0');
+) THEN NEW.numero_factura := lpad(
+    nextval('public.facturas_rm_seq') :: text,
+    4,
+    '0'
+);
 
 END IF;
 
@@ -73,3 +77,26 @@ END $ $;
 
 -- 5) Notificación
 RAISE NOTICE 'Migración creada: sequence facturas_rm_seq y trigger assign_factura_rm_numero';
+
+-- 6) Función para obtener el próximo valor (sin avanzar la sequence) para mostrar en UI
+CREATE
+OR REPLACE FUNCTION public.peek_next_factura_rm() RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $ $ DECLARE v_last bigint := 0;
+
+BEGIN
+SELECT
+    COALESCE(last_value, 0) INTO v_last
+FROM
+    pg_sequences
+WHERE
+    schemaname = 'public'
+    AND sequencename = 'facturas_rm_seq';
+
+IF v_last IS NULL THEN v_last := 0;
+
+END IF;
+
+RETURN lpad((v_last + 1) :: text, 4, '0');
+
+END;
+
+$ $;

@@ -221,6 +221,7 @@ export const getEstadoLabel = (estado) => {
     pendiente: "Pendiente",
     pagado: "Pagado",
     parcial: "Parcial",
+    pago_parcial: "Parcial",
     anulado: "Anulado",
   };
   return labels[estado] || estado;
@@ -233,6 +234,8 @@ export const getEstadoColor = (estado) => {
     pagado:
       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     parcial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    pago_parcial:
+      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
     anulado: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
   };
   return (
