@@ -87,9 +87,10 @@ Deno.serve(async (request) => {
     payload.redirect_to?.trim() || `${new URL(request.url).origin}/login`;
 
   const { data: inviteData, error: inviteError } =
-    await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
-      data: {
+    await adminClient.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
         full_name: payload.full_name || "",
         role_key: payload.role_key || "Auxiliar",
         permissions: payload.permissions || [],
