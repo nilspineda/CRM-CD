@@ -296,6 +296,19 @@ export const isIngreso = (tipo) =>
     "pago_facturas_remision",
   ].includes(tipo);
 
+// Normalizar un objeto (solo propiedades string) a mayúsculas
+export const toUpperAll = (obj) => {
+  if (!obj || typeof obj !== "object") return obj;
+  const out = Array.isArray(obj) ? [] : {};
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (typeof val === "string") out[key] = val.toUpperCase();
+    else if (val && typeof val === "object") out[key] = toUpperAll(val);
+    else out[key] = val;
+  }
+  return out;
+};
+
 export const isEgreso = (tipo) =>
   [
     "pago_iva",

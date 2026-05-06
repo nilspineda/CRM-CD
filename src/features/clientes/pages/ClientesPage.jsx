@@ -5,9 +5,9 @@ import { Mail, MessageCircle, Plus, Search, Users } from "lucide-react";
 import Card, { CardContent } from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
-import Badge from "../../../components/ui/Badge";
 import Input, { Textarea } from "../../../components/ui/Input";
 import { clientesService } from "../services/clientesService";
+import { toUpperAll } from "../../../lib/utils";
 
 const emptyForm = {
   nit: "",
@@ -54,15 +54,32 @@ export default function ClientesPage() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const { data: clientes = [], isLoading } = useQuery({
-    queryKey: ["clientes"],
-    queryFn: clientesService.getAll,
+  const { data: statsData } = useQuery({
+    queryKey: ["clientes", "stats"],
+    queryFn: clientesService.getStats,
+    staleTime: 5 * 60 * 1000,
   });
+
+  const { data: clientes = {}, isLoading } = useQuery({
+    queryKey: ["clientes", "paginated", page, query],
+    queryFn: () =>
+      clientesService.getPaginated({
+        page,
+        pageSize: PAGE_SIZE,
+        search: query,
+      }),
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+
+  const totalPages = Math.ceil((clientes.count || 0) / PAGE_SIZE);
+  const clientesPaginados = clientes.data || [];
 
   const crearMutate = useMutation({
     mutationFn: clientesService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["clientes", "stats"] });
     },
   });
 
@@ -70,41 +87,16 @@ export default function ClientesPage() {
     mutationFn: ({ id, data }) => clientesService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["clientes", "stats"] });
     },
   });
 
-  const clientesFiltrados = useMemo(() => {
-    const text = query.trim().toLowerCase();
-    if (!text) return clientes;
-    return clientes.filter((cliente) => {
-      return [
-        cliente.nit,
-        cliente.nombre,
-        cliente.telefono,
-        cliente.correo,
-        cliente.responsable,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(text));
-    });
-  }, [clientes, query]);
-
-  const totalPages = Math.ceil(clientesFiltrados.length / PAGE_SIZE);
-  const clientesPaginados = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return clientesFiltrados.slice(start, start + PAGE_SIZE);
-  }, [clientesFiltrados, page]);
-
   const stats = useMemo(() => {
-    return clientes.reduce(
-      (acc, cliente) => {
-        if (cliente.estado !== false) acc.activos += 1;
-        else acc.inactivos += 1;
-        return acc;
-      },
-      { activos: 0, inactivos: 0 },
-    );
-  }, [clientes]);
+    return {
+      activos: statsData?.activos || 0,
+      inactivos: statsData?.inactivos || 0,
+    };
+  }, [statsData]);
 
   const openModal = (cliente = null) => {
     setSelectedCliente(cliente);
@@ -137,7 +129,6 @@ export default function ClientesPage() {
     event.preventDefault();
     const nextErrors = {};
 
-    if (!form.nit) nextErrors.nit = "El NIT es obligatorio";
     if (!form.nombre) nextErrors.nombre = "El nombre es obligatorio";
 
     if (Object.keys(nextErrors).length > 0) {
@@ -146,7 +137,7 @@ export default function ClientesPage() {
     }
 
     try {
-      const payload = {
+      let payload = {
         nit: form.nit,
         nombre: form.nombre,
         telefono: form.telefono || null,
@@ -157,6 +148,9 @@ export default function ClientesPage() {
         observaciones: form.observaciones || null,
         estado: form.estado,
       };
+
+      // Normalizar todo a mayúsculas (según regla: nada se guarda en minúsculas)
+      payload = toUpperAll(payload);
 
       if (selectedCliente) {
         await actualizarMutate.mutateAsync({
@@ -301,13 +295,22 @@ export default function ClientesPage() {
                     <td className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center font-medium">
                       {cliente.nit}
                     </td>
-                    <td data-label="Empresa" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center">
+                    <td
+                      data-label="Empresa"
+                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center"
+                    >
                       {cliente.nombre}
                     </td>
-                    <td data-label="Responsable" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td
+                      data-label="Responsable"
+                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center"
+                    >
                       {cliente.responsable || "-"}
                     </td>
-                    <td data-label="Teléfono" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td
+                      data-label="Teléfono"
+                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center"
+                    >
                       {cliente.telefono ? (
                         <a
                           href={getWhatsAppUrl(cliente.telefono)}
@@ -323,7 +326,10 @@ export default function ClientesPage() {
                         "-"
                       )}
                     </td>
-                    <td data-label="Correo" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all">
+                    <td
+                      data-label="Correo"
+                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center break-all"
+                    >
                       {cliente.correo ? (
                         <a
                           href={getGmailComposeUrl(cliente.correo)}
@@ -339,7 +345,10 @@ export default function ClientesPage() {
                         "-"
                       )}
                     </td>
-                    <td data-label="Dirección" className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                    <td
+                      data-label="Dirección"
+                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center"
+                    >
                       {cliente.direccion || "-"}
                     </td>
                     <td className="px-3 sm:px-4 py-3">
@@ -387,8 +396,8 @@ export default function ClientesPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Mostrando {(page - 1) * PAGE_SIZE + 1} -{" "}
-              {Math.min(page * PAGE_SIZE, clientesFiltrados.length)} de{" "}
-              {clientesFiltrados.length}
+              {Math.min(page * PAGE_SIZE, clientes.count || 0)} de{" "}
+              {clientes.count || 0}
             </div>
             <div className="flex gap-2">
               <button
@@ -421,15 +430,16 @@ export default function ClientesPage() {
             <Input
               label="NIT"
               value={form.nit}
+              forceUppercase
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, nit: event.target.value }))
               }
               error={errors.nit}
-              required
             />
             <Input
               label="Nombre"
               value={form.nombre}
+              forceUppercase
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, nombre: event.target.value }))
               }
@@ -460,6 +470,7 @@ export default function ClientesPage() {
             <Input
               label="Dirección"
               value={form.direccion}
+              forceUppercase
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, direccion: event.target.value }))
               }
@@ -467,6 +478,7 @@ export default function ClientesPage() {
             <Input
               label="Responsable"
               value={form.responsable}
+              forceUppercase
               onChange={(event) =>
                 setForm((prev) => ({
                   ...prev,
@@ -511,6 +523,7 @@ export default function ClientesPage() {
           <Textarea
             label="Observaciones"
             value={form.observaciones}
+            forceUppercase
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,

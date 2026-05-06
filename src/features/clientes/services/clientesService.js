@@ -1,16 +1,45 @@
 import { supabase } from "../../../lib/supabase";
 
 export const clientesService = {
-  async getAll() {
-    const { data, error } = await supabase
+  async getPaginated({ page = 1, pageSize = 20, search = "" }) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
       .from("clientes")
-      .select(
-        "id,nit,nombre,telefono,correo,responsable,direccion,estado,fecha_cumpleaños,observaciones,updated_at",
-      )
+      .select("id,nit,nombre,telefono,correo,responsable,direccion,estado", {
+        count: "exact",
+      })
       .order("nombre");
 
+    if (search.trim()) {
+      const searchTerm = search.trim();
+      query = query.or(
+        `nit.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%,responsable.ilike.%${searchTerm}%`,
+      );
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
     if (error) throw error;
-    return data || [];
+    return { data: data || [], count: count || 0 };
+  },
+
+  async getStats() {
+    const { count: activos, error: errorActivos } = await supabase
+      .from("clientes")
+      .select("*", { count: "exact", head: true })
+      .eq("estado", true);
+
+    const { count: inactivos, error: errorInactivos } = await supabase
+      .from("clientes")
+      .select("*", { count: "exact", head: true })
+      .eq("estado", false);
+
+    if (errorActivos) throw errorActivos;
+    if (errorInactivos) throw errorInactivos;
+
+    return { activos: activos || 0, inactivos: inactivos || 0 };
   },
 
   // Versión ligera: solo los campos necesarios para enricher facturas en CarteraPage
