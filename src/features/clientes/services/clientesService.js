@@ -14,8 +14,9 @@ export const clientesService = {
 
     if (search.trim()) {
       const searchTerm = search.trim();
+      const searchClean = searchTerm.replace(/\s/g, "");
       query = query.or(
-        `nit.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%,responsable.ilike.%${searchTerm}%`,
+        `nit.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,telefono.ilike.%${searchClean}%,correo.ilike.%${searchTerm}%,responsable.ilike.%${searchTerm}%`,
       );
     }
 
