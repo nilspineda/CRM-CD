@@ -338,8 +338,8 @@ export default function ClientesPage() {
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
                           title="Enviar correo con Gmail"
                         >
-                          <Mail size={14} />
-                          <span>{cliente.correo}</span>
+                          <Mail size={12} />
+                          <span>Enviar Email</span>
                         </a>
                       ) : (
                         "-"
