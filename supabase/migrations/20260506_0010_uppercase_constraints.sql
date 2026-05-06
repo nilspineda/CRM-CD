@@ -34,7 +34,12 @@ END LOOP;
 -- recrear el registro tipado a partir del json modificado
 reg := (TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME) :: regclass;
 
-EXECUTE format('SELECT json_populate_record(NULL::%s, $1)', reg) INTO NEW USING j;
+-- jsonb_populate_record devuelve un composite; seleccionar sus campos con '.*'
+-- asegura que la fila resultante tenga la misma estructura que la tabla objetivo
+EXECUTE format(
+    'SELECT (jsonb_populate_record(NULL::%s, $1)).*',
+    reg
+) INTO NEW USING j;
 
 RETURN NEW;
 

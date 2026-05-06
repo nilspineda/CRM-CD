@@ -66,9 +66,7 @@ export const clientesService = {
   async getUpcomingBirthdays(limit = 10) {
     const { data, error } = await supabase
       .from("clientes_proximos_cumpleanos")
-      .select(
-        "id,nit,nombre,responsable,telefono,correo,direccion,fecha_cumpleaños,next_birthday,days_until",
-      )
+      .select("id,nombre,responsable,next_birthday,days_until")
       .order("days_until", { ascending: true })
       .limit(limit);
 

@@ -147,6 +147,7 @@ export default function DashboardHome() {
   const { data: cuentasData = [], isLoading: cuentasLoading } = useQuery({
     queryKey: ["cuentas", "todas"],
     queryFn: cuentasService.getAll,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: movimientosData = [], isLoading: movimientosLoading } =
@@ -161,7 +162,9 @@ export default function DashboardHome() {
           fechaInicio: anioResumen.start.toISOString().split("T")[0],
           fechaFin: anioResumen.end.toISOString().split("T")[0],
           ordenarPor: "fecha_desc",
+          skipJoin: true,
         }),
+      staleTime: 5 * 60 * 1000,
     });
 
   const {
@@ -180,11 +183,13 @@ export default function DashboardHome() {
         mesResumen.start.toISOString().split("T")[0],
         mesResumen.end.toISOString().split("T")[0],
       ),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: birthdays = [], isLoading: birthdaysLoading } = useQuery({
     queryKey: ["clientes", "cumpleanos"],
     queryFn: () => clientesService.getUpcomingBirthdays(10),
+    staleTime: 10 * 60 * 1000,
   });
 
   const loading =

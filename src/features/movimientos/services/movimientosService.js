@@ -150,11 +150,13 @@ export const movimientosService = {
   },
 
   async getAll(filtros = {}) {
-    let query = supabase.from("movimientos_financieros").select(`
-        id, fecha, tipo_movimiento, descripcion, valor_base, valor_total, valor_iva, incluye_iva, porcentaje_iva, estado, cuenta_id, cliente_proveedor, categoria_id, observaciones,
-        valor_pendiente,
-        cuentas_financieras(nombre)
-      `);
+    const selectFields = filtros.skipJoin
+      ? "id, fecha, tipo_movimiento, descripcion, valor_base, valor_total, valor_iva, incluye_iva, porcentaje_iva, estado, cuenta_id, cliente_proveedor, categoria_id, observaciones, valor_pendiente"
+      : `id, fecha, tipo_movimiento, descripcion, valor_base, valor_total, valor_iva, incluye_iva, porcentaje_iva, estado, cuenta_id, cliente_proveedor, categoria_id, observaciones, valor_pendiente, cuentas_financieras(nombre)`;
+
+    let query = supabase
+      .from("movimientos_financieros")
+      .select(selectFields);
 
     const ordenarPor = filtros.ordenarPor || "fecha_desc";
     const [orderBy, orderDir] = ordenarPor.split("_");

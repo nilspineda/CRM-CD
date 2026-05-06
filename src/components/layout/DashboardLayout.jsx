@@ -1,3 +1,7 @@
+const linkweb = window.location.href;
+
+const whatsappLink = `https://wa.me/573167195500?text=Hola,%20tengo%20un%20error%20con%20la%20pagina:%0A${encodeURIComponent(linkweb)}`;
+
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import {
@@ -217,18 +221,18 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
-            <div className="hidden md:flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-300">
-                Sistema activo
-              </span>
-            </div>
-            <button
-              className="p-2 md:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors touch-target flex items-center justify-center"
-              aria-label="Configuracion"
+            <a
+              href="https://wa.me/573167195500"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <Settings size={18} />
-            </button>
+              <div className="hidden md:flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Reportar Fallos
+                </span>
+              </div>
+            </a>
           </div>
         </header>
 

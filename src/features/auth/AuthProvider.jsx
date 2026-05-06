@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
       }
     };
 
-    const bootstrapTimeout = window.setTimeout(finishBootstrap, 4000);
+    const bootstrapTimeout = window.setTimeout(finishBootstrap, 2000);
 
     const {
       data: { subscription },
