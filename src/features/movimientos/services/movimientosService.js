@@ -152,6 +152,7 @@ export const movimientosService = {
   async getAll(filtros = {}) {
     let query = supabase.from("movimientos_financieros").select(`
         id, fecha, tipo_movimiento, descripcion, valor_base, valor_total, valor_iva, incluye_iva, porcentaje_iva, estado, cuenta_id, cliente_proveedor, categoria_id, observaciones,
+        valor_pendiente,
         cuentas_financieras(nombre)
       `);
 
@@ -398,7 +399,7 @@ export const movimientosService = {
     const { data, error } = await supabase
       .from("movimientos_financieros")
       .select(
-        "id, fecha, tipo_movimiento, descripcion, valor_total, estado, cuenta_id, cliente_proveedor",
+        "id, fecha, tipo_movimiento, descripcion, valor_total, valor_pendiente, estado, cuenta_id, cliente_proveedor",
       )
       .eq("cuenta_id", cuentaId)
       .order("fecha", { ascending: false });
