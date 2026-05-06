@@ -4,29 +4,6 @@ import { getEffectiveAccess } from "./permissions";
 
 const AuthContext = createContext(null);
 
-async function fetchProfile(user) {
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (error) {
-    const missingTable =
-      error.code === "42P01" ||
-      error.message?.toLowerCase().includes("does not exist");
-    if (!missingTable) {
-      throw error;
-    }
-
-    return null;
-  }
-
-  return data || null;
-}
-
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -36,75 +13,71 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
-    let bootstrapped = false;
+    let initialized = false;
 
-    const finishBootstrap = () => {
-      if (mounted && !bootstrapped) {
-        bootstrapped = true;
-        setLoading(false);
+    const init = async () => {
+      if (initialized) return;
+      initialized = true;
+
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (currentSession?.user) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          try {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("id,role_key,full_name")
+              .eq("id", currentSession.user.id)
+              .maybeSingle();
+            
+            if (mounted) setProfile(profileData);
+          } catch (e) {
+            console.warn("Profile fetch error:", e);
+          }
+        }
+      } catch (e) {
+        console.error("Auth init error:", e);
+        if (mounted) setError(e);
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
-    const bootstrapSession = async () => {
-      try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
+    const timeoutId = setTimeout(() => {
+      console.warn("Auth init timeout");
+      if (mounted) setLoading(false);
+    }, 5000);
 
-        if (!mounted) return;
-        if (sessionError) throw sessionError;
+    init();
 
-        const nextSession = data.session ?? null;
-        const nextUser = nextSession?.user ?? null;
-        const nextProfile = await fetchProfile(nextUser);
-
-        if (!mounted) return;
-
-        setSession(nextSession);
-        setUser(nextUser);
-        setProfile(nextProfile);
-        setError(null);
-      } catch (authError) {
-        if (!mounted) return;
-
-        setError(authError);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
+      
+      if (event === "SIGNED_IN" && newSession?.user) {
+        setSession(newSession);
+        setUser(newSession.user);
+        
+        supabase
+          .from("profiles")
+          .select("id,role_key,full_name")
+          .eq("id", newSession.user.id)
+          .maybeSingle()
+          .then(({ data }) => setProfile(data));
+      } else if (event === "SIGNED_OUT") {
         setSession(null);
         setUser(null);
         setProfile(null);
-      } finally {
-        finishBootstrap();
-      }
-    };
-
-    const bootstrapTimeout = window.setTimeout(finishBootstrap, 2000);
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      try {
-        const nextUser = nextSession?.user ?? null;
-        const nextProfile = await fetchProfile(nextUser);
-
-        if (!mounted) return;
-
-        setSession(nextSession ?? null);
-        setUser(nextUser);
-        setProfile(nextProfile);
-        setError(null);
-      } catch (authError) {
-        if (!mounted) return;
-        setError(authError);
-        setSession(nextSession ?? null);
-        setUser(nextSession?.user ?? null);
-        setProfile(null);
-      } finally {
-        finishBootstrap();
       }
     });
 
-    bootstrapSession();
-
     return () => {
       mounted = false;
-      window.clearTimeout(bootstrapTimeout);
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -127,9 +100,18 @@ export function AuthProvider({ children }) {
 
       if (signInError) throw signInError;
 
+      const newUser = data.session?.user ?? null;
       setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setProfile(await fetchProfile(data.session?.user ?? null));
+      setUser(newUser);
+
+      if (newUser) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id,role_key,full_name")
+          .eq("id", newUser.id)
+          .maybeSingle();
+        setProfile(profileData);
+      }
 
       return data.session;
     } catch (signInError) {
@@ -165,9 +147,14 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    const nextProfile = await fetchProfile(user);
-    setProfile(nextProfile);
-    return nextProfile;
+    const { data } = await supabase
+      .from("profiles")
+      .select("id,role_key,full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    
+    setProfile(data);
+    return data;
   };
 
   const value = {

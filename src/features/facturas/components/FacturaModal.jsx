@@ -41,14 +41,21 @@ export default function FacturaModal({ isOpen, onClose, factura }) {
 
   const clientesFiltrados = useMemo(() => {
     if (!clienteBusqueda) return [];
-    const searchLower = clienteBusqueda.toLowerCase();
+    const searchLower = clienteBusqueda.toLowerCase().replace(/\s/g, "");
+    const searchClean = clienteBusqueda.replace(/\s/g, "");
     return clientesData
-      .filter(
-        (c) =>
-          c.nit.toLowerCase().includes(searchLower) ||
-          c.nombre.toLowerCase().includes(searchLower) ||
-          (c.responsable && c.responsable.toLowerCase().includes(searchLower))
-      )
+      .filter((c) => {
+        const nitClean = c.nit ? c.nit.replace(/\s/g, "") : "";
+        const telClean = c.telefono ? c.telefono.replace(/\s/g, "") : "";
+        return (
+          c.nit?.toLowerCase().includes(searchLower) ||
+          nitClean.includes(searchClean) ||
+          c.nombre?.toLowerCase().includes(searchLower) ||
+          c.responsable?.toLowerCase().includes(searchLower) ||
+          c.telefono?.toLowerCase().includes(searchLower) ||
+          telClean.includes(searchClean)
+        );
+      })
       .slice(0, 5);
   }, [clientesData, clienteBusqueda]);
 

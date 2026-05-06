@@ -42,7 +42,9 @@ export default function CuentasPage() {
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [page, setPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
-  const [logsMonth, setLogsMonth] = useState(currentMonth);
+  const [logsMonth, setLogsMonth] = useState("");
+
+
   const queryClient = useQueryClient();
   const currentUserLabel = profile?.full_name || user?.email || "Sistema";
 
