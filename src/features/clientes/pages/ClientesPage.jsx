@@ -1,5 +1,5 @@
 // filepath: src/features/clientes/pages/ClientesPage.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, MessageCircle, Plus, Search, Users } from "lucide-react";
 import Card, { CardContent } from "../../../components/ui/Card";
@@ -47,12 +47,22 @@ function getGmailComposeUrl(email) {
 
 export default function ClientesPage() {
   const [query, setQuery] = useState("");
+  const [queryDebounced, setQueryDebounced] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQueryDebounced(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [queryDebounced]);
 
   const { data: statsData } = useQuery({
     queryKey: ["clientes", "stats"],
@@ -61,12 +71,12 @@ export default function ClientesPage() {
   });
 
   const { data: clientes = {}, isLoading } = useQuery({
-    queryKey: ["clientes", "paginated", page, query],
+    queryKey: ["clientes", "paginated", page, queryDebounced],
     queryFn: () =>
       clientesService.getPaginated({
         page,
         pageSize: PAGE_SIZE,
-        search: query,
+        search: queryDebounced,
       }),
     staleTime: 2 * 60 * 1000,
     placeholderData: (prev) => prev,

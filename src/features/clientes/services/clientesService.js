@@ -85,14 +85,24 @@ export const clientesService = {
   },
 
   async update(id, cliente) {
-    const { data, error } = await supabase
-      .from("clientes")
-      .update({ ...cliente, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    if (error) throw error;
-    return data[0];
+    try {
+      const { data, error } = await supabase
+        .from("clientes")
+        .update({ ...cliente, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select();
+
+      clearTimeout(timeoutId);
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
   },
 
   async delete(id) {
