@@ -3,7 +3,7 @@ import Input, { Select, Textarea } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../services/movimientosService";
-import { isIngreso } from "../../../lib/utils";
+import { isIngreso, formatDateInput } from "../../../lib/utils";
 import { TIPOS_MOVIMIENTO_EGRESOS, CATEGORY_ORDER_EGRESOS } from "../constants";
 
 const ESTADOS = [
@@ -31,7 +31,7 @@ export default function MovimientoForm({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
-    fecha: new Date().toISOString().split("T")[0],
+    fecha: formatDateInput(new Date()),
     tipo_movimiento: initialData.tipo_movimiento || "servicios_agua_1p",
     cuenta_id: initialData.cuenta_id || "",
     valor_total: initialData.valor_total || 0,
@@ -48,7 +48,7 @@ export default function MovimientoForm({
   useEffect(() => {
     if (movimiento) {
       setFormData({
-        fecha: movimiento.fecha || new Date().toISOString().split("T")[0],
+        fecha: movimiento.fecha || formatDateInput(new Date()),
         tipo_movimiento: movimiento.tipo_movimiento || "servicios_agua_1p",
         cuenta_id: movimiento.cuenta_id || "",
         valor_total: movimiento.valor_total || 0,
@@ -61,7 +61,7 @@ export default function MovimientoForm({
 
   const loadCuentas = async () => {
     try {
-      const data = await cuentasService.getActivas();
+      const data = await cuentasService.getAll();
       setCuentas(data || []);
     } catch (error) {
       console.error("Error cargando cuentas:", error);

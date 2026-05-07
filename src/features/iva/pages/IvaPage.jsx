@@ -13,6 +13,7 @@ import { movimientosService } from "../../movimientos/services/movimientosServic
 import {
   formatCurrency,
   formatDate,
+  formatDateInput,
   getDateRange,
   getEffectiveIvaPercentage,
   getTipoMovimientoLabel,
@@ -25,8 +26,8 @@ import { exportToExcel } from "../../../lib/exportExcel";
 export default function IvaPage() {
   const range = getDateRange("month");
   const [filtros, setFiltros] = useState({
-    fechaInicio: range.start.toISOString().split("T")[0],
-    fechaFin: range.end.toISOString().split("T")[0],
+    fechaInicio: formatDateInput(range.start),
+    fechaFin: formatDateInput(range.end),
   });
 
   const { data: movimientos = [], isLoading: loading } = useQuery({

@@ -29,14 +29,18 @@ import Card, {
   CardContent,
 } from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
+import Modal from "../../../components/ui/Modal";
 import { cuentasService } from "../../cuentas/services/cuentasService";
 import { movimientosService } from "../../movimientos/services/movimientosService";
 import { clientesService } from "../../clientes/services/clientesService";
 import {
   formatCurrency,
   formatDate,
+  formatDateInput,
   getDateRange,
   getTipoMovimientoLabel,
+  getEstadoLabel,
+  getEstadoColor,
   isIngreso,
   isEgreso,
 } from "../../../lib/utils";
@@ -115,12 +119,16 @@ const DashboardTooltip = ({ active, payload, label }) => {
 export default function DashboardHome() {
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [cuentaDetalleOpen, setCuentaDetalleOpen] = useState(false);
+  const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
+  const [movimientosPage, setMovimientosPage] = useState(1);
+  const [cuentaMovimientosMes, setCuentaMovimientosMes] = useState("");
+  const MOVIMIENTOS_PAGE_SIZE = 20;
 
   const getMonthRange = (monthStr) => {
     if (!monthStr) {
-      // Si no hay mes seleccionado, retorna rango de "todo el tiempo"
-      const start = new Date("2000-01-01T00:00:00Z");
-      const end = new Date("2100-12-31T23:59:59Z");
+      const start = new Date("2000-01-01");
+      const end = new Date("2100-12-31");
       return { start, end };
     }
     const [year, month] = monthStr.split("-").map(Number);
@@ -131,13 +139,13 @@ export default function DashboardHome() {
 
   const getYearRange = (monthStr) => {
     if (!monthStr) {
-      const start = new Date("2000-01-01T00:00:00Z");
-      const end = new Date("2100-12-31T23:59:59Z");
+      const start = new Date("2000-01-01");
+      const end = new Date("2100-12-31");
       return { start, end };
     }
     const year = Number(monthStr.split("-")[0]);
-    const start = new Date(Date.UTC(year, 0, 1));
-    const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
     return { start, end };
   };
 
@@ -154,13 +162,13 @@ export default function DashboardHome() {
     useQuery({
       queryKey: [
         "movimientos",
-        anioResumen.start.toISOString(),
-        anioResumen.end.toISOString(),
+        formatDateInput(anioResumen.start),
+        formatDateInput(anioResumen.end),
       ],
       queryFn: () =>
         movimientosService.getAll({
-          fechaInicio: anioResumen.start.toISOString().split("T")[0],
-          fechaFin: anioResumen.end.toISOString().split("T")[0],
+          fechaInicio: formatDateInput(anioResumen.start),
+          fechaFin: formatDateInput(anioResumen.end),
           ordenarPor: "fecha_desc",
           skipJoin: true,
         }),
@@ -177,11 +185,11 @@ export default function DashboardHome() {
     },
     isLoading: statsLoading,
   } = useQuery({
-    queryKey: ["movimientos", "stats", mesResumen],
+    queryKey: ["movimientos", "stats", anioResumen.start.toISOString()],
     queryFn: () =>
       movimientosService.getEstadisticas(
-        mesResumen.start.toISOString().split("T")[0],
-        mesResumen.end.toISOString().split("T")[0],
+        formatDateInput(anioResumen.start),
+        formatDateInput(anioResumen.end),
       ),
     staleTime: 5 * 60 * 1000,
   });
@@ -192,12 +200,44 @@ export default function DashboardHome() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const getCuentaMovimientosRange = (monthStr) => {
+    if (!monthStr) return { fechaInicio: "2000-01-01", fechaFin: "2100-12-31" };
+    const [year, month] = monthStr.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    return {
+      fechaInicio: formatDateInput(start),
+      fechaFin: formatDateInput(end),
+    };
+  };
+
+  const { data: cuentaMovimientos = [], isLoading: cuentaMovimientosLoading } =
+    useQuery({
+      queryKey: [
+        "movimientos",
+        "cuenta",
+        cuentaSeleccionada?.id,
+        cuentaMovimientosMes,
+      ],
+      queryFn: () =>
+        movimientosService.getAll({
+          cuentaId: cuentaSeleccionada?.id,
+          ...getCuentaMovimientosRange(cuentaMovimientosMes),
+          ordenarPor: "fecha_desc",
+        }),
+      enabled: !!cuentaSeleccionada?.id,
+    });
+
   const loading =
     cuentasLoading || movimientosLoading || statsLoading || birthdaysLoading;
 
-  const movimientosRecientes = useMemo(
-    () => movimientosData.slice(0, 6),
-    [movimientosData],
+  const movimientosPaginados = useMemo(() => {
+    const start = (movimientosPage - 1) * MOVIMIENTOS_PAGE_SIZE;
+    return movimientosData.slice(start, start + MOVIMIENTOS_PAGE_SIZE);
+  }, [movimientosData, movimientosPage]);
+
+  const movimientosTotalPages = Math.ceil(
+    movimientosData.length / MOVIMIENTOS_PAGE_SIZE,
   );
 
   const saldoTotal = useMemo(
@@ -397,22 +437,6 @@ export default function DashboardHome() {
 
         <Card className="w-full">
           <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
-            <div className="p-2 sm:p-3 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">
-              <Wallet className="text-slate-600 dark:text-slate-400 w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                Cuentas activas
-              </p>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
-                {cuentasData.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full">
-          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
             <div className="p-2 sm:p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
               <FileText className="text-amber-600 dark:text-amber-400 w-5 h-5 sm:w-6 sm:h-6" />
             </div>
@@ -433,7 +457,7 @@ export default function DashboardHome() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">
-              Ingresos y gastos por mes
+              Ingresos vs Gastos por mes
             </CardTitle>
           </CardHeader>
           <CardContent className="h-64 sm:h-80 md:h-96">
@@ -443,7 +467,7 @@ export default function DashboardHome() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyChartData} barCategoryGap={20}>
+                <BarChart data={monthlyChartData} barCategoryGap={8}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis
                     dataKey="name"
@@ -458,60 +482,15 @@ export default function DashboardHome() {
                   <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Bar
                     dataKey="Ingresos"
-                    fill="#f59e0b"
+                    fill="#22c55e"
+                    name="Ingresos"
                     radius={[4, 4, 0, 0]}
                   />
-                  <Bar dataKey="Egresos" fill="#dc2626" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="w-full">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base sm:text-lg">
-                Saldos de cuentas
-              </CardTitle>
-              <Link
-                to="/cuentas"
-                className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1"
-              >
-                Ver cuentas <ArrowRight size={14} />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="h-64 sm:h-80 md:h-96">
-            {accountsChartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-                No hay cuentas activas para mostrar.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={accountsChartData}
-                  layout="vertical"
-                  barCategoryGap={12}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    type="number"
-                    tick={{ fill: "#64748b", fontSize: 11 }}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={80}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
-                  />
-                  <Tooltip content={<DashboardTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Bar
-                    dataKey="saldo"
-                    name="Saldo"
-                    fill="#f59e0b"
-                    radius={[0, 4, 4, 0]}
+                    dataKey="Egresos"
+                    fill="#ef4444"
+                    name="Gastos"
+                    radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -549,14 +528,18 @@ export default function DashboardHome() {
                   .map((cuenta) => (
                     <div
                       key={cuenta.id}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors ${
                         cuenta.estado === false
                           ? "bg-slate-50/50 dark:bg-slate-700/20 opacity-60"
                           : "bg-slate-50 dark:bg-slate-700/50"
                       }`}
+                      onClick={() => {
+                        setCuentaSeleccionada(cuenta);
+                        setCuentaDetalleOpen(true);
+                      }}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">
+                        <p className="font-medium text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate hover:text-amber-600 dark:hover:text-amber-400">
                           {cuenta.nombre}
                           {cuenta.estado === false && (
                             <span className="ml-2 text-xs text-slate-400">
@@ -611,12 +594,12 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
-              {movimientosRecientes.length === 0 ? (
+              {movimientosPaginados.length === 0 ? (
                 <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">
                   No hay movimientos registrados
                 </p>
               ) : (
-                movimientosRecientes.map((mov) => (
+                movimientosPaginados.map((mov) => (
                   <div
                     key={mov.id}
                     className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
@@ -663,12 +646,37 @@ export default function DashboardHome() {
                 ))
               )}
             </div>
+            {movimientosTotalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setMovimientosPage((p) => Math.max(1, p - 1))}
+                  disabled={movimientosPage === 1}
+                  className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Página {movimientosPage} de {movimientosTotalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setMovimientosPage((p) =>
+                      Math.min(movimientosTotalPages, p + 1),
+                    )
+                  }
+                  disabled={movimientosPage === movimientosTotalPages}
+                  className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Quick actions */}
-      <Card className="w-full">
+      {/* <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-base sm:text-lg">
             Próximos cumpleaños
@@ -713,8 +721,8 @@ export default function DashboardHome() {
             </div>
           )}
         </CardContent>
-      </Card>
-      <Card className="w-full">
+      </Card> */}
+      {/* <Card className="w-full">
         <CardContent className="p-3 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3 sm:mb-4">
             Acciones rápidas
@@ -778,7 +786,170 @@ export default function DashboardHome() {
             </Link>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
+
+      <Modal
+        isOpen={cuentaDetalleOpen}
+        onClose={() => {
+          setCuentaDetalleOpen(false);
+          setCuentaSeleccionada(null);
+          setMovimientosPage(1);
+          setCuentaMovimientosMes("");
+        }}
+        title={cuentaSeleccionada?.nombre || "Detalle de Cuenta"}
+        size="xl"
+      >
+        {cuentaSeleccionada && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Tipo
+                </p>
+                <p className="font-medium text-slate-800 dark:text-slate-100 capitalize">
+                  {cuentaSeleccionada.tipo_cuenta?.replace("_", " ")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Saldo Actual
+                </p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {formatCurrency(cuentaSeleccionada.saldo_actual)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Estado
+                </p>
+                <p
+                  className={`font-medium ${cuentaSeleccionada.estado === false ? "text-red-600" : "text-green-600"}`}
+                >
+                  {cuentaSeleccionada.estado === false ? "Inactiva" : "Activa"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Banco
+                </p>
+                <p className="text-slate-800 dark:text-slate-100">
+                  {cuentaSeleccionada.banco || "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-slate-800 dark:text-slate-100">
+                  Movimientos
+                </h4>
+                <input
+                  type="month"
+                  value={cuentaMovimientosMes}
+                  onChange={(e) => {
+                    setCuentaMovimientosMes(e.target.value);
+                    setMovimientosPage(1);
+                  }}
+                  className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg"
+                />
+              </div>
+
+              {cuentaMovimientosLoading ? (
+                <p className="text-slate-500">Cargando movimientos...</p>
+              ) : cuentaMovimientos.length === 0 ? (
+                <p className="text-slate-500 text-center py-4">
+                  No hay movimientos
+                </p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                          <th className="px-2 py-2 text-left">Fecha</th>
+                          <th className="px-2 py-2 text-left">Tipo</th>
+                          <th className="px-2 py-2 text-left">Descripción</th>
+                          <th className="px-2 py-2 text-right">Valor</th>
+                          <th className="px-2 py-2 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cuentaMovimientos
+                          .slice(
+                            (movimientosPage - 1) * 20,
+                            movimientosPage * 20,
+                          )
+                          .map((mov) => (
+                            <tr
+                              key={mov.id}
+                              className="border-b border-slate-100 dark:border-slate-700"
+                            >
+                              <td className="px-2 py-2 text-slate-600 dark:text-slate-400">
+                                {formatDate(mov.fecha)}
+                              </td>
+                              <td className="px-2 py-2 text-slate-800 dark:text-slate-200">
+                                {getTipoMovimientoLabel(mov.tipo_movimiento)}
+                              </td>
+                              <td className="px-2 py-2 text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
+                                {mov.descripcion}
+                              </td>
+                              <td
+                                className={`px-2 py-2 text-right font-medium ${isIngreso(mov.tipo_movimiento) ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {formatCurrency(mov.valor_total)}
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-xs ${getEstadoColor(mov.estado)}`}
+                                >
+                                  {getEstadoLabel(mov.estado)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {cuentaMovimientos.length > 20 && (
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                      <button
+                        onClick={() =>
+                          setMovimientosPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={movimientosPage === 1}
+                        className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        {movimientosPage} /{" "}
+                        {Math.ceil(cuentaMovimientos.length / 20)}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setMovimientosPage((p) =>
+                            Math.min(
+                              Math.ceil(cuentaMovimientos.length / 20),
+                              p + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          movimientosPage >=
+                          Math.ceil(cuentaMovimientos.length / 20)
+                        }
+                        className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

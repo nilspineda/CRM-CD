@@ -210,26 +210,49 @@ export default function FacturasPage() {
 
 const statsFacturacion = useMemo(() => {
     let total = 0;
+    let totalFE = 0;
+    let totalRM = 0;
     let pagado = 0;
+    let pagadoFE = 0;
+    let pagadoRM = 0;
     let pendiente = 0;
 
     facturasEnriquecidas.forEach((f) => {
       if (f.estado === "anulado") return;
       const est = (f.estado || "").toLowerCase();
+      const prefijo = (f.prefijo || "").toUpperCase();
       const val = Number(f.valor_total) || 0;
+      
       total += val;
+      if (prefijo === "FE") totalFE += val;
+      else if (prefijo === "RM") totalRM += val;
+      
       if (est === "pagado") {
         pagado += val;
+        if (prefijo === "FE") pagadoFE += val;
+        else if (prefijo === "RM") pagadoRM += val;
       } else if (est === "pago_parcial") {
         const abonado = Number(f.valor_pagado) || 0;
         pagado += abonado;
+        if (prefijo === "FE") pagadoFE += abonado;
+        else if (prefijo === "RM") pagadoRM += abonado;
         pendiente += (val - abonado);
       } else {
         pendiente += val;
       }
     });
 
-    return { total, pagado, pendiente };
+    return { 
+      total, 
+      totalFE, 
+      totalRM,
+      countFE: facturasEnriquecidas.filter(f => (f.prefijo || "").toUpperCase() === "FE" && f.estado !== "anulado").length,
+      countRM: facturasEnriquecidas.filter(f => (f.prefijo || "").toUpperCase() === "RM" && f.estado !== "anulado").length,
+      pagado, 
+      pagadoFE,
+      pagadoRM,
+      pendiente 
+    };
   }, [facturasEnriquecidas]);
 
   const totalPages = Math.ceil(facturasEnriquecidas.length / PAGE_SIZE);
@@ -367,45 +390,70 @@ const statsFacturacion = useMemo(() => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
+      {/* KPI Cards - Facturas Electrónicas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
         <Card>
-          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
-              <Receipt className="text-blue-600 dark:text-blue-400 w-5 h-5" />
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded">
+                <Receipt className="text-blue-600 dark:text-blue-400 w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">FE (Facturas)</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total facturado del mes</p>
-              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
-                {formatCurrency(statsFacturacion.total)}
-              </p>
-            </div>
+            <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
+              {statsFacturacion.countFE}
+            </p>
+            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+              {formatCurrency(statsFacturacion.totalFE)}
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
-              <CheckCircle2 className="text-green-600 dark:text-green-400 w-5 h-5" />
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded">
+                <Receipt className="text-purple-600 dark:text-purple-400 w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">RM (Remisiones)</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total cobrado (Pagado)</p>
-              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
-                {formatCurrency(statsFacturacion.pagado)}
-              </p>
-            </div>
+            <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
+              {statsFacturacion.countRM}
+            </p>
+            <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+              {formatCurrency(statsFacturacion.totalRM)}
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
-              <Clock className="text-amber-600 dark:text-amber-400 w-5 h-5" />
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded">
+                <CheckCircle2 className="text-green-600 dark:text-green-400 w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total Cobrado (Pagado)</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total pendiente (Cartera)</p>
-              <p className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
-                {formatCurrency(statsFacturacion.pendiente)}
-              </p>
+            <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400">
+              {formatCurrency(statsFacturacion.pagado)}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              FE: {formatCurrency(statsFacturacion.pagadoFE)} | RM: {formatCurrency(statsFacturacion.pagadoRM)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 rounded">
+                <Clock className="text-amber-600 dark:text-amber-400 w-4 h-4" />
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total Pendiente (Cartera)</p>
             </div>
+            <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
+              {formatCurrency(statsFacturacion.pendiente)}
+            </p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              Total: {formatCurrency(statsFacturacion.total)}
+            </p>
           </CardContent>
         </Card>
       </div>

@@ -7,7 +7,8 @@ import Button from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import Input, { Textarea } from "../../../components/ui/Input";
 import { clientesService } from "../services/clientesService";
-import { toUpperAll } from "../../../lib/utils";
+import { facturasService } from "../../facturas/services/facturasService";
+import { toUpperAll, formatCurrency, formatDate, getEstadoLabel, getEstadoColor } from "../../../lib/utils";
 
 const emptyForm = {
   nit: "",
@@ -53,6 +54,8 @@ export default function ClientesPage() {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [page, setPage] = useState(1);
+  const [facturasModalOpen, setFacturasModalOpen] = useState(false);
+  const [clienteFacturas, setClienteFacturas] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -68,6 +71,18 @@ export default function ClientesPage() {
     queryKey: ["clientes", "stats"],
     queryFn: clientesService.getStats,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: birthdays = [], isLoading: birthdaysLoading } = useQuery({
+    queryKey: ["clientes", "cumpleanos"],
+    queryFn: () => clientesService.getUpcomingBirthdays(20),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: facturasCliente = [], isLoading: facturasLoading } = useQuery({
+    queryKey: ["facturas", "by-cliente", clienteFacturas?.nit],
+    queryFn: () => facturasService.getAll({ cliente_nit: clienteFacturas?.nit }),
+    enabled: !!clienteFacturas?.nit,
   });
 
   const { data: clientes = {}, isLoading } = useQuery({
@@ -230,6 +245,38 @@ export default function ClientesPage() {
         />
       </div>
 
+      {birthdays.length > 0 && (
+        <Card className="w-full">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+              Próximos Cumpleaños
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-500 dark:text-slate-400">
+                    <th className="px-2 py-1 text-left">Cliente</th>
+                    <th className="px-2 py-1 text-left">Empresa</th>
+                    <th className="px-2 py-1 text-left">Fecha</th>
+                    <th className="px-2 py-1 text-right">Días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {birthdays.slice(0, 10).map((c) => (
+                    <tr key={c.nit} className="border-t border-slate-100 dark:border-slate-700">
+                      <td className="px-2 py-2 text-slate-800 dark:text-slate-200">{c.nombre}</td>
+                      <td className="px-2 py-2 text-slate-600 dark:text-slate-400">{c.nit}</td>
+                      <td className="px-2 py-2 text-slate-600 dark:text-slate-400">{c.fecha_cumpleaños}</td>
+                      <td className="px-2 py-2 text-right text-amber-600 dark:text-amber-400 font-medium">{c.dias_restantes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent>
           <div className="relative">
@@ -308,9 +355,17 @@ export default function ClientesPage() {
                     </td>
                     <td
                       data-label="Empresa"
-                      className="px-3 sm:px-4 py-3 text-sm text-slate-700 dark:text-slate-300 font-medium text-center"
+                      className="px-3 sm:px-4 py-3 text-sm font-medium text-center"
                     >
-                      {cliente.nombre}
+                      <button
+                        onClick={() => {
+                          setClienteFacturas(cliente);
+                          setFacturasModalOpen(true);
+                        }}
+                        className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline"
+                      >
+                        {cliente.nombre}
+                      </button>
                     </td>
                     <td
                       data-label="Responsable"
@@ -553,6 +608,55 @@ export default function ClientesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={facturasModalOpen}
+        onClose={() => {
+          setFacturasModalOpen(false);
+          setClienteFacturas(null);
+        }}
+        title={`Facturas de ${clienteFacturas?.nombre || ""}`}
+        size="lg"
+      >
+        {facturasLoading ? (
+          <p className="text-slate-500">Cargando...</p>
+        ) : facturasCliente.length === 0 ? (
+          <p className="text-slate-500">No hay facturas para este cliente.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                  <th className="px-2 py-2 text-left">Número</th>
+                  <th className="px-2 py-2 text-left">Fecha</th>
+                  <th className="px-2 py-2 text-right">Valor</th>
+                  <th className="px-2 py-2 text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facturasCliente.map((f) => (
+                  <tr key={f.id} className="border-b border-slate-100 dark:border-slate-700">
+                    <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-200">
+                      {f.prefijo}-{f.numero_factura}
+                    </td>
+                    <td className="px-2 py-2 text-slate-600 dark:text-slate-400">
+                      {formatDate(f.fecha_pago || f.fecha_creacion)}
+                    </td>
+                    <td className="px-2 py-2 text-right font-semibold text-slate-800 dark:text-slate-200">
+                      {formatCurrency(f.valor_total)}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(f.estado)}`}>
+                        {getEstadoLabel(f.estado)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
     </div>
   );

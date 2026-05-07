@@ -8,7 +8,7 @@ import CambiarEstadoModal from "../../facturas/components/CambiarEstadoModal";
 import FacturaModal from "../../facturas/components/FacturaModal";
 import FacturaDetalleModal from "../../facturas/components/FacturaDetalleModal";
 import Button from "../../../components/ui/Button";
-import { formatCurrency, formatDate, getDateRange } from "../../../lib/utils";
+import { formatCurrency, formatDate, formatDateInput, getDateRange } from "../../../lib/utils";
 
 export default function CarteraPage() {
   const [query, setQuery] = useState("");
@@ -32,8 +32,8 @@ export default function CarteraPage() {
       let filtros = { estado: "cartera" };
       if (mesResumen) {
         const monthRange = getMonthRange(mesResumen);
-        filtros.fechaInicio = monthRange.start.toISOString().split("T")[0];
-        filtros.fechaFin = monthRange.end.toISOString().split("T")[0];
+        filtros.fechaInicio = formatDateInput(monthRange.start);
+        filtros.fechaFin = formatDateInput(monthRange.end);
       }
       return facturasService.getAll(filtros);
     },

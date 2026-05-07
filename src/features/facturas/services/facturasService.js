@@ -1,7 +1,8 @@
 import { supabase } from "../../../lib/supabase";
 import { cuentasService } from "../../cuentas/services/cuentasService";
+import { formatDateInput } from "../../../lib/utils";
 
-const hoy = () => new Date().toISOString().split("T")[0];
+const hoy = () => formatDateInput(new Date());
 
 const parseFecha = (value) => {
   if (!value) return null;

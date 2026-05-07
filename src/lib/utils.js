@@ -27,7 +27,10 @@ export const formatDate = (date) => {
 export const formatDateInput = (date) => {
   if (!date) return "";
   const d = new Date(date);
-  return d.toISOString().split("T")[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 export const getDateRange = (type) => {
@@ -152,6 +155,8 @@ export const TIPO_MOVIMIENTO_LABELS = {
   servicio_indriver: "SERVICIO DE INDRIVER",
   servicio_contable: "SERVICIO CONTABLE",
   insumo_plotter: "INSUMO PLOTTER",
+  cuatro_x_mil: "4x1000",
+  manejo_tarjeta: "MANEJO DE TARJETA",
   "SERVICIOS PUBLICOS 1 PISO - AGUA": "servicios_agua_1p",
   "SERVICIOS PUBLICOS 1 PISO - LUZ": "servicios_luz_1p",
   "SERVICIOS PUBLICOS 1 PISO - GAS": "servicios_gas_1p",
@@ -186,6 +191,8 @@ export const TIPO_MOVIMIENTO_LABELS = {
   "SERVICIO DE INDRIVER": "servicio_indriver",
   "SERVICIO CONTABLE": "servicio_contable",
   "INSUMO PLOTTER": "insumo_plotter",
+  "4x1000": "cuatro_x_mil",
+  "MANEJO DE TARJETA": "manejo_tarjeta",
 };
 
 const CANONICAL_TIPOS_MOVIMIENTO = new Set(

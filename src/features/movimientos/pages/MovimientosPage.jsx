@@ -14,6 +14,7 @@ import Button from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import Badge from "../../../components/ui/Badge";
 import { movimientosService } from "../services/movimientosService";
+import { cuentasService } from "../../cuentas/services/cuentasService";
 import {
   formatCurrency,
   formatDate,
@@ -54,8 +55,8 @@ export default function MovimientosPage() {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0);
     return {
-      fechaInicio: start.toISOString().split("T")[0],
-      fechaFin: end.toISOString().split("T")[0],
+      fechaInicio: formatDateInput(start),
+      fechaFin: formatDateInput(end),
     };
   };
 
@@ -63,6 +64,12 @@ export default function MovimientosPage() {
     queryKey: ["movimientos", "tipos"],
     queryFn: movimientosService.getTiposMovimientoDisponibles,
     staleTime: Infinity,
+  });
+
+  const { data: cuentasData = [] } = useQuery({
+    queryKey: ["cuentas", "todas"],
+    queryFn: cuentasService.getAll,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: movimientosData = [], isLoading } = useQuery({
@@ -386,6 +393,19 @@ export default function MovimientosPage() {
               }}
               className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:bg-slate-800 dark:text-slate-100"
             />
+            <select
+              name="cuentaId"
+              value={filtros.cuentaId}
+              onChange={handleFilterChange}
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Todas las cuentas</option>
+              {cuentasData.map((cuenta) => (
+                <option key={cuenta.id} value={cuenta.id}>
+                  {cuenta.nombre}
+                </option>
+              ))}
+            </select>
             <select
               name="tipoMovimiento"
               value={filtros.tipoMovimiento}
